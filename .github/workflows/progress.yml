@@ -1,0 +1,32 @@
+name: Update Progress Dashboard
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - '_docs/roadmap.md'
+      - '.github/workflows/progress.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+jobs:
+  build-dashboard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Generate dashboard HTML
+        run: |
+          node .github/scripts/generate-dashboard.js
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./docs-site
+          publish_branch: gh-pages
+          force_orphan: true
