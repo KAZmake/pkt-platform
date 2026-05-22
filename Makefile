@@ -1,12 +1,15 @@
 .PHONY: up down restart logs ps health clean migrate migrate-down
 
 COMPOSE  = docker compose -f infra/docker-compose.yml --env-file infra/.env.docker
-DB_URL   = postgres://pkt:pkt_secret@localhost:5433/pkt_db?sslmode=disable
-MIGRATE  = docker run --rm --network pkt_pkt-net \
-           -v $(PWD)/apps/api/core-api/migrations:/core \
-           -v $(PWD)/apps/api/expertise-svc/migrations:/expertise \
-           -v $(PWD)/apps/api/sync-svc/migrations:/sync \
-           migrate/migrate
+DB_URL       = postgres://pkt:pkt_secret@localhost:5433/pkt_db?sslmode=disable
+MIGRATE_CORE      = postgres://pkt:pkt_secret@pkt-postgres:5432/pkt_db?sslmode=disable&x-migrations-table=schema_migrations_core
+MIGRATE_EXPERTISE = postgres://pkt:pkt_secret@pkt-postgres:5432/pkt_db?sslmode=disable&x-migrations-table=schema_migrations_expertise
+MIGRATE_SYNC      = postgres://pkt:pkt_secret@pkt-postgres:5432/pkt_db?sslmode=disable&x-migrations-table=schema_migrations_sync
+MIGRATE      = docker run --rm --network infra_pkt-net \
+               -v $(PWD)/apps/api/core-api/migrations:/core \
+               -v $(PWD)/apps/api/expertise-svc/migrations:/expertise \
+               -v $(PWD)/apps/api/sync-svc/migrations:/sync \
+               migrate/migrate
 
 # ─── Основные команды ─────────────────────────────────────────────────────────
 
@@ -51,20 +54,20 @@ health:
 
 migrate:
 	@echo "=== Migrating core-api ===" && \
-	 $(MIGRATE) -path /core   -database "$(DB_URL)" up
+	 $(MIGRATE) -path /core      -database "$(MIGRATE_CORE)"      up
 	@echo "=== Migrating expertise-svc ===" && \
-	 $(MIGRATE) -path /expertise -database "$(DB_URL)" up
+	 $(MIGRATE) -path /expertise -database "$(MIGRATE_EXPERTISE)" up
 	@echo "=== Migrating sync-svc ===" && \
-	 $(MIGRATE) -path /sync   -database "$(DB_URL)" up
+	 $(MIGRATE) -path /sync      -database "$(MIGRATE_SYNC)"      up
 	@echo "All migrations applied."
 
 migrate-down:
 	@echo "=== Rolling back sync-svc ===" && \
-	 $(MIGRATE) -path /sync   -database "$(DB_URL)" down 1
+	 $(MIGRATE) -path /sync      -database "$(MIGRATE_SYNC)"      down 1
 	@echo "=== Rolling back expertise-svc ===" && \
-	 $(MIGRATE) -path /expertise -database "$(DB_URL)" down 1
+	 $(MIGRATE) -path /expertise -database "$(MIGRATE_EXPERTISE)" down 1
 	@echo "=== Rolling back core-api ===" && \
-	 $(MIGRATE) -path /core   -database "$(DB_URL)" down 1
+	 $(MIGRATE) -path /core      -database "$(MIGRATE_CORE)"      down 1
 
 # ─── Очистка данных (ОСТОРОЖНО — удаляет volumes) ────────────────────────────
 

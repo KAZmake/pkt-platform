@@ -16,9 +16,6 @@ CREATE TABLE IF NOT EXISTS loans (
     CONSTRAINT loans_one_c_id_key UNIQUE (one_c_id)
 );
 
--- TimescaleDB: партиционирование по времени синхронизации
-SELECT create_hypertable('loans', 'synced_at', if_not_exists => TRUE);
-
 CREATE UNIQUE INDEX IF NOT EXISTS idx_loans_one_c_id    ON loans (one_c_id);
 CREATE        INDEX IF NOT EXISTS idx_loans_borrower_id ON loans (borrower_id);
 
