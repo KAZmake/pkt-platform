@@ -1,0 +1,3 @@
+DROP TABLE IF EXISTS land_parcels;
+DROP TABLE IF EXISTS farms;
+DROP TABLE IF EXISTS districts;

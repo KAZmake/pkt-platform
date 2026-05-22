@@ -1,6 +1,12 @@
-.PHONY: up down restart logs ps health clean
+.PHONY: up down restart logs ps health clean migrate migrate-down
 
-COMPOSE = docker compose -f infra/docker-compose.yml --env-file infra/.env.docker
+COMPOSE  = docker compose -f infra/docker-compose.yml --env-file infra/.env.docker
+DB_URL   = postgres://pkt:pkt_secret@localhost:5432/pkt_db?sslmode=disable
+MIGRATE  = docker run --rm --network pkt_pkt-net \
+           -v $(PWD)/apps/api/core-api/migrations:/core \
+           -v $(PWD)/apps/api/expertise-svc/migrations:/expertise \
+           -v $(PWD)/apps/api/sync-svc/migrations:/sync \
+           migrate/migrate
 
 # ─── Основные команды ─────────────────────────────────────────────────────────
 
@@ -39,6 +45,26 @@ health:
 	@echo "=== NATS ===" && curl -s http://localhost:8222/healthz | grep -o '"status":"ok"' || echo "NATS: not ready"
 	@echo "=== Keycloak ===" && curl -sf http://localhost:8180/health/ready > /dev/null && echo "OK" || echo "NOT READY"
 	@echo "=== Directus ===" && curl -sf http://localhost:8055/server/health > /dev/null && echo "OK" || echo "NOT READY"
+
+# ─── Миграции (golang-migrate через Docker) ───────────────────────────────────
+# Порядок важен: core-api (users, geo, borrowers) → expertise → sync
+
+migrate:
+	@echo "=== Migrating core-api ===" && \
+	 $(MIGRATE) -path /core   -database "$(DB_URL)" up
+	@echo "=== Migrating expertise-svc ===" && \
+	 $(MIGRATE) -path /expertise -database "$(DB_URL)" up
+	@echo "=== Migrating sync-svc ===" && \
+	 $(MIGRATE) -path /sync   -database "$(DB_URL)" up
+	@echo "All migrations applied."
+
+migrate-down:
+	@echo "=== Rolling back sync-svc ===" && \
+	 $(MIGRATE) -path /sync   -database "$(DB_URL)" down 1
+	@echo "=== Rolling back expertise-svc ===" && \
+	 $(MIGRATE) -path /expertise -database "$(DB_URL)" down 1
+	@echo "=== Rolling back core-api ===" && \
+	 $(MIGRATE) -path /core   -database "$(DB_URL)" down 1
 
 # ─── Очистка данных (ОСТОРОЖНО — удаляет volumes) ────────────────────────────
 
