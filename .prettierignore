@@ -1,0 +1,10 @@
+node_modules/
+.next/
+.expo/
+dist/
+out/
+build/
+.turbo/
+apps/api/
+_docs/wireframes/
+pnpm-lock.yaml

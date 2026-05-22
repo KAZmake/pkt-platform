@@ -1,0 +1,418 @@
+openapi: 3.0.3
+info:
+  title: PKT Sync Service API
+  description: |
+    Синхронизация с 1С. Cron каждые 20 мин, кэш Redis TTL 30 мин.
+    Данные только читаются — никакой ручной записи.
+    Внутренний сервис: вызывается core-api и expertise-svc, не напрямую клиентом.
+  version: 1.0.0
+
+servers:
+  - url: /api/v1
+    description: Текущая версия API
+
+security:
+  - BearerAuth: []
+
+tags:
+  - name: sync
+    description: Синхронизация и кэш данных из 1С
+  - name: monitoring
+    description: Мониторинг залогов
+
+paths:
+
+  /health:
+    get:
+      tags: [sync]
+      summary: Health check
+      security: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+
+  # ── Синхронизация ────────────────────────────────────────────────────────────
+
+  /sync/trigger:
+    post:
+      tags: [sync]
+      summary: Принудительная синхронизация с 1С
+      description: Роль — admin. В норме запускается cron каждые 20 мин.
+      responses:
+        "202":
+          description: Синхронизация запущена
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  job_id:
+                    type: string
+                  started_at:
+                    type: string
+                    format: date-time
+
+  /sync/status:
+    get:
+      tags: [sync]
+      summary: Статус последней синхронизации
+      description: Роль — admin/employee
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SyncStatus"
+
+  # ── Займы ─────────────────────────────────────────────────────────────────────
+
+  /sync/loans:
+    get:
+      tags: [sync]
+      summary: Все займы (из кэша Redis / PostgreSQL)
+      description: Роль — employee/admin
+      parameters:
+        - name: borrower_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [active, overdue, closed]
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: per_page
+          in: query
+          schema:
+            type: integer
+            default: 50
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoanListResponse"
+
+  /sync/loans/{id}:
+    get:
+      tags: [sync]
+      summary: Детали займа
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Loan"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /sync/loans/{id}/schedule:
+    get:
+      tags: [sync]
+      summary: График платежей по займу
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaymentScheduleResponse"
+
+  /sync/loans/{id}/debts:
+    get:
+      tags: [sync]
+      summary: Задолженности по займу
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/LoanDebt"
+
+  # ── Мониторинг залогов ───────────────────────────────────────────────────────
+
+  /sync/collateral-alerts:
+    get:
+      tags: [monitoring]
+      summary: Залоги с нарушениями / приближающимися дедлайнами
+      description: |
+        Роль — employee/expert/admin.
+        Возвращает залоги у которых:
+        - страховка истекает в течение 30 дней
+        - инвентаризация просрочена
+        - нарушены условия хранения
+      parameters:
+        - name: alert_type
+          in: query
+          schema:
+            type: string
+            enum: [insurance_expiry, inventory_overdue, all]
+            default: all
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CollateralAlert"
+
+  /sync/upcoming-payments:
+    get:
+      tags: [monitoring]
+      summary: Предстоящие платежи (сводный список)
+      description: Роль — employee/admin. Фильтр и сортировка для дашборда аналитики.
+      parameters:
+        - name: days_ahead
+          in: query
+          schema:
+            type: integer
+            default: 30
+          description: Платежи в ближайшие N дней
+        - name: borrower_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: [due_date, amount]
+            default: due_date
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/UpcomingPayment"
+
+# ─── COMPONENTS ───────────────────────────────────────────────────────────────
+
+components:
+
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    ID:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+  responses:
+    NotFound:
+      description: Не найдено
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiError"
+
+  schemas:
+
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: ok
+        service:
+          type: string
+          example: sync-svc
+
+    ApiError:
+      type: object
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+
+    SyncStatus:
+      type: object
+      properties:
+        last_sync_at:
+          type: string
+          format: date-time
+        next_sync_at:
+          type: string
+          format: date-time
+        loans_synced:
+          type: integer
+        errors:
+          type: array
+          items:
+            type: string
+
+    Loan:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        one_c_id:
+          type: string
+        borrower_id:
+          type: string
+          format: uuid
+        program_id:
+          type: string
+          format: uuid
+        amount:
+          type: number
+        rate:
+          type: number
+        term_months:
+          type: integer
+        issued_at:
+          type: string
+          format: date
+        expires_at:
+          type: string
+          format: date
+        status:
+          type: string
+          enum: [active, overdue, closed]
+        synced_at:
+          type: string
+          format: date-time
+
+    LoanListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Loan"
+        meta:
+          type: object
+          properties:
+            page:
+              type: integer
+            per_page:
+              type: integer
+            total:
+              type: integer
+
+    PaymentScheduleItem:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        due_date:
+          type: string
+          format: date
+        principal:
+          type: number
+        interest:
+          type: number
+        total:
+          type: number
+        is_paid:
+          type: boolean
+        paid_at:
+          type: string
+          format: date
+        synced_at:
+          type: string
+          format: date-time
+
+    PaymentScheduleResponse:
+      type: object
+      properties:
+        loan:
+          $ref: "#/components/schemas/Loan"
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/PaymentScheduleItem"
+
+    LoanDebt:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        type:
+          type: string
+          enum: [principal, interest, penalty]
+        amount:
+          type: number
+        days_overdue:
+          type: integer
+        synced_at:
+          type: string
+          format: date-time
+
+    CollateralAlert:
+      type: object
+      properties:
+        collateral_id:
+          type: string
+          format: uuid
+        collateral_type:
+          type: string
+        description:
+          type: string
+        alert_type:
+          type: string
+          enum: [insurance_expiry, inventory_overdue]
+        days_until_expiry:
+          type: integer
+          description: Отрицательное — уже просрочено
+        borrower_name:
+          type: string
+        application_id:
+          type: string
+          format: uuid
+
+    UpcomingPayment:
+      type: object
+      properties:
+        loan_id:
+          type: string
+          format: uuid
+        borrower_name:
+          type: string
+        due_date:
+          type: string
+          format: date
+        total:
+          type: number
+        is_overdue:
+          type: boolean
+        days_until_due:
+          type: integer

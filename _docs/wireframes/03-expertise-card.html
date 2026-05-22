@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Wireframe 03 — Карточка заявки (Экспертиза)</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: system-ui, sans-serif; background: #e8e8e8; color: #333; font-size: 13px; }
+  .wf-block {
+    background: #d0d0d0; border: 1px dashed #aaa; border-radius: 4px;
+    display: flex; align-items: center; justify-content: center;
+    color: #666; font-size: 12px; text-align: center; padding: 4px;
+  }
+  .wf-label { font-size: 10px; color: #999; text-transform: uppercase; letter-spacing: .05em; margin-bottom: 8px; }
+
+  .page { max-width: 1440px; margin: 0 auto; background: #f0f0f0; }
+
+  header {
+    background: #b0b0b0; padding: 0 24px;
+    display: flex; align-items: center; gap: 12px; height: 56px;
+  }
+  .logo { width: 120px; height: 36px; }
+  .header-spacer { flex: 1; }
+
+  .app-shell { display: grid; grid-template-columns: 260px 1fr; min-height: calc(100vh - 56px); }
+
+  /* Sidebar — очередь */
+  .sidebar { background: #c0c0c0; padding: 12px; display: flex; flex-direction: column; gap: 6px; overflow-y: auto; }
+  .sidebar-header { height: 36px; border-radius: 6px; margin-bottom: 4px; }
+  .queue-item {
+    background: #b8b8b8; border-radius: 6px; padding: 10px 12px;
+    display: flex; flex-direction: column; gap: 4px; cursor: pointer;
+    border-left: 3px solid transparent;
+  }
+  .queue-item.active { background: #a8a8a8; border-left-color: #666; }
+  .queue-name { height: 14px; }
+  .queue-meta { display: flex; gap: 6px; }
+  .queue-amount { height: 10px; width: 80px; }
+  .queue-status { height: 16px; width: 90px; border-radius: 99px; }
+
+  /* Main area */
+  .main { padding: 20px; display: flex; flex-direction: column; gap: 16px; }
+
+  /* Application header */
+  .app-header {
+    background: #c8c8c8; border-radius: 8px; padding: 16px 20px;
+    display: flex; justify-content: space-between; align-items: flex-start;
+  }
+  .app-header-left { display: flex; flex-direction: column; gap: 6px; }
+  .app-num { height: 14px; width: 120px; }
+  .app-name { height: 22px; width: 280px; }
+  .app-meta { display: flex; gap: 8px; }
+  .app-meta-item { height: 14px; width: 120px; }
+  .app-header-right { display: flex; flex-direction: column; gap: 8px; align-items: flex-end; }
+  .app-amount { height: 28px; width: 160px; }
+  .app-status { height: 24px; width: 160px; border-radius: 99px; }
+
+  /* FSM Progress */
+  .fsm-bar {
+    background: #c8c8c8; border-radius: 8px; padding: 12px 16px;
+    display: flex; align-items: center; gap: 0;
+  }
+  .fsm-step {
+    display: flex; flex-direction: column; align-items: center; flex: 1; gap: 4px;
+  }
+  .fsm-dot { width: 28px; height: 28px; border-radius: 50%; background: #aaa; border: 2px solid #999; }
+  .fsm-dot.done { background: #888; }
+  .fsm-dot.active { background: #777; border-color: #555; }
+  .fsm-dot.todo { background: #bbb; border-color: #aaa; }
+  .fsm-label { font-size: 9px; color: #666; text-align: center; max-width: 70px; }
+  .fsm-line { flex: 1; height: 2px; background: #aaa; margin-bottom: 16px; }
+  .fsm-line.done { background: #888; }
+
+  /* Tabs */
+  .tabs { display: flex; gap: 2px; border-bottom: 2px solid #bbb; }
+  .tab {
+    padding: 8px 16px; font-size: 12px; color: #666; cursor: pointer;
+    border-bottom: 2px solid transparent; margin-bottom: -2px;
+    background: #d0d0d0; border-radius: 4px 4px 0 0;
+  }
+  .tab.active { background: #c0c0c0; color: #333; border-bottom-color: #888; font-weight: 600; }
+
+  /* Tab content */
+  .tab-content { background: #c8c8c8; border-radius: 0 8px 8px 8px; padding: 20px; }
+
+  /* General tab */
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .info-group { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+  .info-group-title { height: 14px; width: 140px; font-size: 11px; background: #b8b8b8; }
+  .info-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px dashed #bbb; }
+  .info-label { height: 12px; width: 120px; background: #b8b8b8; }
+  .info-value { height: 12px; width: 160px; }
+
+  /* Collateral tab */
+  .collateral-item { background: #bbb; border-radius: 6px; padding: 12px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
+  .coll-info { display: flex; flex-direction: column; gap: 4px; }
+  .coll-name { height: 14px; width: 200px; }
+  .coll-meta { height: 10px; width: 280px; }
+  .coll-actions { display: flex; gap: 6px; }
+  .coll-btn { height: 28px; width: 80px; border-radius: 4px; }
+
+  /* History tab */
+  .history-item { display: flex; gap: 12px; padding: 10px 0; border-bottom: 1px dashed #bbb; }
+  .history-dot { width: 10px; height: 10px; border-radius: 50%; background: #888; margin-top: 2px; flex-shrink: 0; }
+  .history-body { display: flex; flex-direction: column; gap: 4px; flex: 1; }
+  .history-text { height: 14px; }
+  .history-meta { height: 10px; width: 200px; }
+
+  /* Action bar */
+  .action-bar {
+    background: #bbb; border-radius: 8px; padding: 12px 20px;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .action-left { display: flex; gap: 8px; }
+  .action-btn { height: 36px; border-radius: 6px; padding: 0 16px; }
+  .action-right { display: flex; gap: 8px; align-items: center; }
+  .assignee-select { height: 36px; width: 200px; border-radius: 6px; }
+  .transition-btn { height: 36px; width: 200px; border-radius: 6px; background: #999; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header>
+    <div class="wf-block logo">Логотип КТ</div>
+    <div class="header-spacer"></div>
+    <div class="wf-block" style="width:120px;height:32px">Экспертиза</div>
+    <div class="wf-block" style="width:120px;height:32px">👤 Иванов А.А.</div>
+  </header>
+
+  <div class="app-shell">
+
+    <!-- Sidebar: очередь заявок -->
+    <aside class="sidebar">
+      <div class="wf-block sidebar-header">Моя очередь (7 заявок)</div>
+
+      <div class="queue-item active">
+        <div class="wf-block queue-name">ИП Сейтжанов Б.М.</div>
+        <div class="queue-meta">
+          <div class="wf-block queue-amount">50 000 000 ₸</div>
+          <div class="wf-block queue-status" style="background:#aaa">Кред. анализ</div>
+        </div>
+      </div>
+      <div class="queue-item">
+        <div class="wf-block queue-name">ТОО «Астык-Дала»</div>
+        <div class="queue-meta">
+          <div class="wf-block queue-amount">120 000 000 ₸</div>
+          <div class="wf-block queue-status">Кред. анализ</div>
+        </div>
+      </div>
+      <div class="queue-item">
+        <div class="wf-block queue-name">КХ Абдуллаев</div>
+        <div class="queue-meta">
+          <div class="wf-block queue-amount">35 000 000 ₸</div>
+          <div class="wf-block queue-status">Кред. анализ</div>
+        </div>
+      </div>
+      <div class="queue-item">
+        <div class="wf-block queue-name">ИП Джаксыбеков</div>
+        <div class="queue-meta">
+          <div class="wf-block queue-amount">80 000 000 ₸</div>
+          <div class="wf-block queue-status">Кред. анализ</div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main content -->
+    <main class="main">
+
+      <!-- APPLICATION HEADER -->
+      <div class="app-header">
+        <div class="app-header-left">
+          <div class="wf-block app-num">Заявка №2026-0042</div>
+          <div class="wf-block app-name">ИП Сейтжанов Болат Маратович</div>
+          <div class="app-meta">
+            <div class="wf-block app-meta-item">Программа: Весенний сев</div>
+            <div class="wf-block app-meta-item">Подана: 10 марта 2026</div>
+            <div class="wf-block app-meta-item">Исп.: Иванов А.А.</div>
+          </div>
+        </div>
+        <div class="app-header-right">
+          <div class="wf-block app-amount">50 000 000 ₸ / 36 мес.</div>
+          <div class="wf-block app-status">⏳ Кредитный анализ</div>
+        </div>
+      </div>
+
+      <!-- FSM PROGRESS BAR -->
+      <div class="fsm-bar">
+        <div class="fsm-step">
+          <div class="fsm-dot done"></div>
+          <div class="fsm-label">Получена</div>
+        </div>
+        <div class="fsm-line done"></div>
+        <div class="fsm-step">
+          <div class="fsm-dot done"></div>
+          <div class="fsm-label">Первичный скоринг</div>
+        </div>
+        <div class="fsm-line done"></div>
+        <div class="fsm-step">
+          <div class="fsm-dot done"></div>
+          <div class="fsm-label">Безопасность</div>
+        </div>
+        <div class="fsm-line done"></div>
+        <div class="fsm-step">
+          <div class="fsm-dot done"></div>
+          <div class="fsm-label">Экспертиза залогов</div>
+        </div>
+        <div class="fsm-line done"></div>
+        <div class="fsm-step">
+          <div class="fsm-dot done"></div>
+          <div class="fsm-label">Юр. проверка</div>
+        </div>
+        <div class="fsm-line done"></div>
+        <div class="fsm-step">
+          <div class="fsm-dot active"></div>
+          <div class="fsm-label">Кред. анализ ◀</div>
+        </div>
+        <div class="fsm-line"></div>
+        <div class="fsm-step">
+          <div class="fsm-dot todo"></div>
+          <div class="fsm-label">КК</div>
+        </div>
+        <div class="fsm-line"></div>
+        <div class="fsm-step">
+          <div class="fsm-dot todo"></div>
+          <div class="fsm-label">Одобрена / Откл.</div>
+        </div>
+        <div class="fsm-line"></div>
+        <div class="fsm-step">
+          <div class="fsm-dot todo"></div>
+          <div class="fsm-label">Документация</div>
+        </div>
+        <div class="fsm-line"></div>
+        <div class="fsm-step">
+          <div class="fsm-dot todo"></div>
+          <div class="fsm-label">Выдан</div>
+        </div>
+      </div>
+
+      <!-- TABS -->
+      <div>
+        <div class="tabs">
+          <div class="tab active">1. Общие данные</div>
+          <div class="tab">2. Финансовый анализ</div>
+          <div class="tab">3. Залоги</div>
+          <div class="tab">4. Документы</div>
+          <div class="tab">5. Заключение</div>
+          <div class="tab">6. История</div>
+        </div>
+
+        <!-- TAB 1: Общие данные (активная) -->
+        <div class="tab-content">
+          <div class="two-col">
+            <div>
+              <div class="info-group">
+                <div class="wf-block info-group-title">Заявитель</div>
+                <div class="info-row">
+                  <div class="wf-block info-label">ФИО</div>
+                  <div class="wf-block info-value">Сейтжанов Болат Маратович</div>
+                </div>
+                <div class="info-row">
+                  <div class="wf-block info-label">ИИН</div>
+                  <div class="wf-block info-value">800101300123</div>
+                </div>
+                <div class="info-row">
+                  <div class="wf-block info-label">Телефон</div>
+                  <div class="wf-block info-value">+7 701 234 56 78</div>
+                </div>
+                <div class="info-row">
+                  <div class="wf-block info-label">Email</div>
+                  <div class="wf-block info-value">seitzanov@example.com</div>
+                </div>
+              </div>
+              <div class="info-group">
+                <div class="wf-block info-group-title">Хозяйство</div>
+                <div class="info-row">
+                  <div class="wf-block info-label">Название</div>
+                  <div class="wf-block info-value">ИП Сейтжанов</div>
+                </div>
+                <div class="info-row">
+                  <div class="wf-block info-label">Район</div>
+                  <div class="wf-block info-value">Теректинский р-н</div>
+                </div>
+                <div class="info-row">
+                  <div class="wf-block info-label">Деятельность</div>
+                  <div class="wf-block info-value">Растениеводство</div>
+                </div>
+                <div class="info-row">
+                  <div class="wf-block info-label">Площадь пашни</div>
+                  <div class="wf-block info-value">1 200 га</div>
+                </div>
+              </div>
+            </div>
+            <div>
+              <div class="info-group">
+                <div class="wf-block info-group-title">Параметры займа</div>
+                <div class="info-row">
+                  <div class="wf-block info-label">Программа</div>
+                  <div class="wf-block info-value">Весенний сев 2026</div>
+                </div>
+                <div class="info-row">
+                  <div class="wf-block info-label">Сумма</div>
+                  <div class="wf-block info-value">50 000 000 ₸</div>
+                </div>
+                <div class="info-row">
+                  <div class="wf-block info-label">Срок</div>
+                  <div class="wf-block info-value">36 месяцев</div>
+                </div>
+                <div class="info-row">
+                  <div class="wf-block info-label">Ставка</div>
+                  <div class="wf-block info-value">7% годовых</div>
+                </div>
+                <div class="info-row">
+                  <div class="wf-block info-label">Тип платежей</div>
+                  <div class="wf-block info-value">Дифференцированные</div>
+                </div>
+              </div>
+              <div class="wf-block" style="height:80px;margin-top:8px">
+                Кнопка: Открыть карточку заёмщика →<br>
+                (полное досье: история займов, залоги, документы)
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ACTION BAR -->
+      <div class="action-bar">
+        <div class="action-left">
+          <div class="wf-block action-btn" style="width:120px">На доработку</div>
+          <div class="wf-block action-btn" style="width:100px">Отклонить</div>
+        </div>
+        <div class="action-right">
+          <div class="wf-block assignee-select">Назначить исполнителя КК ▼</div>
+          <div class="wf-block transition-btn" style="font-weight:700">Передать в КК →</div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Wireframe 01 — Главная страница</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: system-ui, sans-serif; background: #e8e8e8; color: #333; font-size: 13px; }
+
+  /* Wireframe helpers */
+  .wf-block {
+    background: #d0d0d0; border: 1px dashed #aaa; border-radius: 4px;
+    display: flex; align-items: center; justify-content: center;
+    color: #666; font-size: 12px; text-align: center; padding: 4px;
+  }
+  .wf-label { font-size: 10px; color: #999; text-transform: uppercase; letter-spacing: .05em; }
+  .wf-img { background: #c4c4c4; border: 1px dashed #aaa; border-radius: 4px; }
+
+  /* Layout */
+  .page { max-width: 1280px; margin: 0 auto; background: #f0f0f0; }
+
+  /* ── HEADER ── */
+  header {
+    background: #b0b0b0; padding: 0 24px;
+    display: flex; align-items: center; gap: 12px; height: 56px;
+  }
+  .logo { width: 120px; height: 36px; }
+  .header-spacer { flex: 1; }
+  .header-item { height: 28px; border-radius: 4px; }
+
+  /* ── TOP BAR ── */
+  .topbar {
+    background: #c8c8c8; height: 32px; padding: 0 24px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .topbar-item { height: 18px; border-radius: 3px; }
+
+  /* ── HERO ── */
+  .hero {
+    height: 380px; background: #b8b8b8; position: relative;
+    display: flex; flex-direction: column; align-items: flex-start;
+    justify-content: center; padding: 40px 48px; gap: 16px;
+  }
+  .hero-title { width: 480px; height: 48px; }
+  .hero-sub { width: 360px; height: 24px; }
+  .hero-btns { display: flex; gap: 12px; }
+  .hero-btn { width: 160px; height: 40px; border-radius: 6px; }
+  .hero-badge { position: absolute; right: 48px; top: 50%; transform: translateY(-50%); width: 200px; height: 160px; }
+
+  /* ── SECTION ── */
+  section { padding: 32px 24px; }
+  .section-title { height: 24px; width: 280px; margin-bottom: 20px; }
+
+  /* ── KPI ── */
+  .kpi-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 8px; }
+  .kpi-card { height: 100px; border-radius: 8px; }
+  .kpi-tabs { display: flex; gap: 8px; margin-bottom: 20px; }
+  .kpi-tab { width: 120px; height: 28px; border-radius: 4px; }
+
+  /* ── CALC + MAP ── */
+  .calc-map { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .calc-box { background: #c8c8c8; border-radius: 8px; padding: 20px; }
+  .calc-row { height: 36px; border-radius: 4px; margin-bottom: 10px; }
+  .calc-result { height: 120px; border-radius: 4px; margin-top: 16px; }
+  .map-box { height: 320px; }
+
+  /* ── PARTNERS ── */
+  .partners-row { display: flex; gap: 12px; flex-wrap: wrap; }
+  .partner { width: 100px; height: 48px; border-radius: 6px; }
+
+  /* ── EVENTS + REVIEWS ── */
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .event-list { display: flex; flex-direction: column; gap: 8px; }
+  .event-item { height: 56px; border-radius: 6px; }
+  .review-list { display: flex; flex-direction: column; gap: 8px; }
+  .review-item { height: 80px; border-radius: 6px; }
+
+  /* ── NEWS ── */
+  .news-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  .news-card { background: #c8c8c8; border-radius: 8px; overflow: hidden; }
+  .news-img { height: 140px; background: #b8b8b8; }
+  .news-body { padding: 12px; display: flex; flex-direction: column; gap: 6px; }
+  .news-date { height: 12px; width: 80px; }
+  .news-title { height: 16px; }
+  .news-excerpt { height: 32px; }
+
+  /* ── FOOTER ── */
+  footer { background: #a8a8a8; height: 120px; display: flex; align-items: center; justify-content: center; }
+
+  /* ── CHATBOT ── */
+  .chatbot {
+    position: fixed; bottom: 24px; right: 24px;
+    width: 56px; height: 56px; border-radius: 50%;
+    background: #888; display: flex; align-items: center; justify-content: center;
+    color: #666; font-size: 20px;
+  }
+
+  /* ── NAV ── */
+  nav {
+    background: #bbb; padding: 0 24px;
+    display: flex; gap: 4px; height: 44px; align-items: center;
+  }
+  .nav-item { height: 28px; border-radius: 4px; padding: 0 12px; display: flex; align-items: center; font-size: 12px; color: #555; background: #c8c8c8; }
+  .nav-item.active { background: #999; color: #333; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- TOP BAR: контакты + язык + доступность -->
+  <div class="topbar">
+    <div class="wf-block topbar-item" style="width:160px">📞 Call-центр: +7 711 000-00-00</div>
+    <div class="header-spacer"></div>
+    <div class="wf-block topbar-item" style="width:100px">Версия для слабовид.</div>
+    <div class="wf-block topbar-item" style="width:80px">Қаз / Рус / Eng</div>
+  </div>
+
+  <!-- HEADER -->
+  <header>
+    <div class="wf-block logo">Логотип КТ</div>
+    <div class="header-spacer"></div>
+    <div class="wf-block header-item" style="width:200px">🔍 Поиск по сайту</div>
+    <div class="wf-block header-item" style="width:100px">Личный кабинет</div>
+    <div class="wf-block header-item" style="width:120px; background:#999;">Подать заявку →</div>
+  </header>
+
+  <!-- NAV -->
+  <nav>
+    <div class="nav-item active">Главная</div>
+    <div class="nav-item">О компании</div>
+    <div class="nav-item">Программы</div>
+    <div class="nav-item">Карта</div>
+    <div class="nav-item">Проекты</div>
+    <div class="nav-item">Новости</div>
+    <div class="nav-item">Контакты</div>
+    <div class="nav-item">FAQ</div>
+  </nav>
+
+  <!-- HERO BANNER -->
+  <div class="hero">
+    <div class="wf-block hero-title">Заголовок / Слоган КТ (H1)</div>
+    <div class="wf-block hero-sub">Подзаголовок — УТП одной строкой</div>
+    <div class="hero-btns">
+      <div class="wf-block hero-btn">Программы кредитования</div>
+      <div class="wf-block hero-btn" style="background:#aaa;">Подать заявку →</div>
+    </div>
+    <div class="wf-block hero-badge">Мини-карта ЗКО<br>(SVG статичная)<br>клик → полная карта</div>
+  </div>
+
+  <!-- KPI СЧЁТЧИКИ -->
+  <section>
+    <div class="wf-label" style="margin-bottom:8px">Раздел: KPI-счётчики (анимация при скролле)</div>
+    <div class="kpi-tabs">
+      <div class="wf-block kpi-tab">Прошлый год</div>
+      <div class="wf-block kpi-tab" style="background:#aaa;">Текущий год</div>
+      <div class="wf-block kpi-tab">Динамика</div>
+    </div>
+    <div class="kpi-row">
+      <div class="wf-block kpi-card">Заёмщики<br><br>NNN чел.</div>
+      <div class="wf-block kpi-card">Ссудный портфель<br><br>NNN млрд ₸</div>
+      <div class="wf-block kpi-card">Посевная площадь<br><br>NNN тыс. га</div>
+      <div class="wf-block kpi-card">Поголовье<br><br>NNN тыс. гол.</div>
+    </div>
+  </section>
+
+  <!-- КАЛЬКУЛЯТОР + КАРТА -->
+  <section style="background:#e0e0e0;">
+    <div class="section-title wf-block">Кредитный калькулятор</div>
+    <div class="calc-map">
+      <div class="calc-box">
+        <div class="wf-block calc-row">Сумма кредита — слайдер + поле ввода</div>
+        <div class="wf-block calc-row">Срок кредита — слайдер + поле ввода</div>
+        <div class="wf-block calc-row">Процентная ставка — поле ввода</div>
+        <div class="wf-block calc-row" style="height:32px">Тип: ◉ Аннуитет  ○ Дифференцированный</div>
+        <div class="wf-block calc-result">Таблица платежей<br>(ежемесячные / итого / переплата)<br><br>Кнопка: Подать заявку с этими параметрами</div>
+      </div>
+      <div class="wf-block map-box">
+        Совокупные активы заёмщиков:<br>
+        Земельный фонд / Посевная площадь /<br>
+        Поголовье / Ссудный портфель<br><br>
+        (таблица или чарт)
+      </div>
+    </div>
+  </section>
+
+  <!-- ПАРТНЁРЫ -->
+  <section>
+    <div class="section-title wf-block">Партнёры и аккредитация</div>
+    <div class="partners-row">
+      <div class="wf-block partner">КазАгро</div>
+      <div class="wf-block partner">Байтерек</div>
+      <div class="wf-block partner">ФРП</div>
+      <div class="wf-block partner">Банк 1</div>
+      <div class="wf-block partner">Банк 2</div>
+    </div>
+  </section>
+
+  <!-- СОБЫТИЯ + ОТЗЫВЫ -->
+  <section style="background:#e0e0e0;">
+    <div class="two-col">
+      <div>
+        <div class="section-title wf-block">Виджет событий</div>
+        <div class="event-list">
+          <div class="wf-block event-item">📅 15 мар — Выезд в Теректинский район</div>
+          <div class="wf-block event-item">📅 01 апр — Собрание заёмщиков</div>
+          <div class="wf-block event-item">📅 15 апр — Дедлайн заявок на весенний сев</div>
+          <div class="wf-block event-item">📅 20 апр — Заседание КК</div>
+        </div>
+      </div>
+      <div>
+        <div class="section-title wf-block">Отзывы заёмщиков (из Directus)</div>
+        <div class="review-list">
+          <div class="wf-block review-item">👤 Фото | Имя заёмщика, хозяйство, район<br>«Текст отзыва одной-двумя строками...»</div>
+          <div class="wf-block review-item">👤 Фото | Имя заёмщика, хозяйство, район<br>«Текст отзыва одной-двумя строками...»</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- НОВОСТИ -->
+  <section>
+    <div class="section-title wf-block">Лента новостей (3 последние из Directus)</div>
+    <div class="news-row">
+      <div class="news-card">
+        <div class="news-img wf-block">Фото новости</div>
+        <div class="news-body">
+          <div class="wf-block news-date">15 мар 2026</div>
+          <div class="wf-block news-title">Заголовок новости</div>
+          <div class="wf-block news-excerpt">Краткое описание новости в 2 строки...</div>
+          <div class="wf-block" style="height:20px;width:80px">Читать →</div>
+        </div>
+      </div>
+      <div class="news-card">
+        <div class="news-img wf-block">Фото новости</div>
+        <div class="news-body">
+          <div class="wf-block news-date">10 мар 2026</div>
+          <div class="wf-block news-title">Заголовок новости</div>
+          <div class="wf-block news-excerpt">Краткое описание новости в 2 строки...</div>
+          <div class="wf-block" style="height:20px;width:80px">Читать →</div>
+        </div>
+      </div>
+      <div class="news-card">
+        <div class="news-img wf-block">Фото новости</div>
+        <div class="news-body">
+          <div class="wf-block news-date">05 мар 2026</div>
+          <div class="wf-block news-title">Заголовок новости</div>
+          <div class="wf-block news-excerpt">Краткое описание новости в 2 строки...</div>
+          <div class="wf-block" style="height:20px;width:80px">Читать →</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer>
+    <div class="wf-block" style="width:100%;height:80px;margin:20px">
+      Footer: Логотип | Навигация | Контакты | Соцсети | © 2026 ТОО «Первое кредитное товарищество»
+    </div>
+  </footer>
+
+</div>
+
+<!-- CHATBOT WIDGET -->
+<div class="chatbot" title="Виртуальный ассистент (всегда видим)">💬</div>
+
+</body>
+</html>

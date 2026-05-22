@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Wireframe 04 — Дашборд аналитики</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: system-ui, sans-serif; background: #e8e8e8; color: #333; font-size: 13px; }
+  .wf-block {
+    background: #d0d0d0; border: 1px dashed #aaa; border-radius: 4px;
+    display: flex; align-items: center; justify-content: center;
+    color: #666; font-size: 12px; text-align: center; padding: 4px;
+  }
+  .wf-label { font-size: 10px; color: #999; text-transform: uppercase; letter-spacing: .05em; margin-bottom: 8px; }
+  .page { max-width: 1440px; margin: 0 auto; background: #f0f0f0; }
+
+  header {
+    background: #b0b0b0; padding: 0 24px;
+    display: flex; align-items: center; gap: 12px; height: 56px;
+  }
+  .logo { width: 120px; height: 36px; }
+  .header-spacer { flex: 1; }
+
+  .app-shell { display: grid; grid-template-columns: 200px 1fr; min-height: calc(100vh - 56px); }
+
+  .sidebar { background: #c0c0c0; padding: 12px; display: flex; flex-direction: column; gap: 4px; }
+  .sidebar-item {
+    height: 36px; border-radius: 6px; padding: 0 12px;
+    display: flex; align-items: center; gap: 8px; font-size: 12px;
+  }
+  .sidebar-item.active { background: #999; color: #222; }
+  .sidebar-item:not(.active) { background: #b8b8b8; color: #555; }
+  .sidebar-section { font-size: 10px; color: #888; text-transform: uppercase; padding: 12px 12px 4px; letter-spacing: .05em; }
+
+  .main { padding: 20px; display: flex; flex-direction: column; gap: 20px; }
+
+  /* KPI cards */
+  .kpi-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; }
+  .kpi-card { background: #c8c8c8; border-radius: 8px; padding: 14px 16px; }
+  .kpi-label { height: 12px; width: 120px; margin-bottom: 8px; }
+  .kpi-value { height: 28px; margin-bottom: 6px; }
+  .kpi-delta { height: 12px; width: 80px; }
+
+  /* Period selector */
+  .period-bar { display: flex; gap: 8px; align-items: center; }
+  .period-btn { height: 30px; border-radius: 4px; padding: 0 12px; }
+  .period-btn.active { background: #999; }
+  .period-btn:not(.active) { background: #c8c8c8; }
+  .period-spacer { flex: 1; }
+  .export-btn { height: 30px; width: 120px; border-radius: 4px; }
+
+  /* Grafana iframe area */
+  .grafana-area {
+    background: #c0c0c0; border-radius: 8px; padding: 16px;
+    display: flex; flex-direction: column; gap: 12px;
+  }
+  .grafana-header { display: flex; gap: 8px; align-items: center; margin-bottom: 4px; }
+  .grafana-title { height: 18px; width: 200px; }
+  .grafana-badge { height: 18px; width: 80px; border-radius: 99px; }
+  .grafana-charts { display: grid; grid-template-columns: 2fr 1fr; gap: 12px; }
+  .grafana-main { height: 280px; border-radius: 6px; }
+  .grafana-side { display: flex; flex-direction: column; gap: 10px; }
+  .grafana-mini { height: 130px; border-radius: 6px; }
+
+  /* Two-col section */
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+  /* Table */
+  .section-card { background: #c8c8c8; border-radius: 8px; padding: 16px; }
+  .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+  .section-title { height: 18px; width: 200px; }
+  .section-action { height: 28px; width: 100px; border-radius: 4px; }
+
+  .data-table { width: 100%; border-collapse: collapse; }
+  .data-table th, .data-table td { padding: 0; }
+  .th-row { display: grid; gap: 1px; margin-bottom: 2px; }
+  .tr-row { display: grid; gap: 1px; margin-bottom: 2px; }
+  .th-cell { height: 26px; background: #b8b8b8; border-radius: 3px; }
+  .td-cell { height: 30px; background: #c0c0c0; border-radius: 3px; }
+  .td-cell.warn { background: #b8b8b8; }
+  .td-cell.ok { background: #c4c4c4; }
+
+  /* Alerts */
+  .alert-list { display: flex; flex-direction: column; gap: 8px; }
+  .alert-item {
+    background: #b8b8b8; border-radius: 6px; padding: 10px 12px;
+    display: flex; gap: 10px; align-items: flex-start;
+    border-left: 3px solid #999;
+  }
+  .alert-icon { font-size: 16px; flex-shrink: 0; }
+  .alert-body { display: flex; flex-direction: column; gap: 4px; flex: 1; }
+  .alert-title { height: 14px; }
+  .alert-meta { height: 10px; width: 200px; }
+  .alert-action { height: 24px; width: 80px; border-radius: 4px; flex-shrink: 0; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header>
+    <div class="wf-block logo">Логотип КТ</div>
+    <div class="header-spacer"></div>
+    <div class="wf-block" style="width:120px;height:32px">Аналитика</div>
+    <div class="wf-block" style="width:120px;height:32px">👤 Петров А.А.</div>
+  </header>
+
+  <div class="app-shell">
+
+    <aside class="sidebar">
+      <div class="sidebar-section">Навигация</div>
+      <div class="sidebar-item active">📊 Дашборд</div>
+      <div class="sidebar-item">💼 Заёмщики</div>
+      <div class="sidebar-item">💳 Портфель займов</div>
+      <div class="sidebar-item">📅 Предстоящие платежи</div>
+      <div class="sidebar-item">🏠 Мониторинг залогов</div>
+      <div class="sidebar-item">📝 Заявки</div>
+      <div class="sidebar-item">💬 Обращения</div>
+
+      <div class="sidebar-section">Отчёты</div>
+      <div class="sidebar-item">📥 Конструктор отчётов</div>
+
+      <div class="sidebar-section">Сервисы</div>
+      <div class="sidebar-item">🗺 Карта</div>
+      <div class="sidebar-item">⚖ Экспертиза</div>
+    </aside>
+
+    <main class="main">
+
+      <!-- PERIOD + EXPORT -->
+      <div class="period-bar">
+        <div class="wf-block period-btn">Неделя</div>
+        <div class="wf-block period-btn active">Месяц</div>
+        <div class="wf-block period-btn">Квартал</div>
+        <div class="wf-block period-btn">Год</div>
+        <div class="wf-block period-btn" style="width:200px">01.01.2026 — 31.03.2026</div>
+        <div class="period-spacer"></div>
+        <div class="wf-block export-btn">Выгрузить Excel</div>
+        <div class="wf-block export-btn">Выгрузить PDF</div>
+      </div>
+
+      <!-- KPI CARDS -->
+      <div>
+        <div class="wf-label">Ключевые показатели</div>
+        <div class="kpi-row">
+          <div class="kpi-card">
+            <div class="wf-block kpi-label">Ссудный портфель</div>
+            <div class="wf-block kpi-value">4 820 000 000 ₸</div>
+            <div class="wf-block kpi-delta">▲ +3.2% к пред. мес.</div>
+          </div>
+          <div class="kpi-card">
+            <div class="wf-block kpi-label">Активных заёмщиков</div>
+            <div class="wf-block kpi-value">142</div>
+            <div class="wf-block kpi-delta">▲ +5 к пред. мес.</div>
+          </div>
+          <div class="kpi-card">
+            <div class="wf-block kpi-label">Просроченных займов</div>
+            <div class="wf-block kpi-value">8</div>
+            <div class="wf-block kpi-delta">▼ -2 к пред. мес.</div>
+          </div>
+          <div class="kpi-card">
+            <div class="wf-block kpi-label">Новых заявок</div>
+            <div class="wf-block kpi-value">17</div>
+            <div class="wf-block kpi-delta">▲ +4 к пред. мес.</div>
+          </div>
+          <div class="kpi-card">
+            <div class="wf-block kpi-label">Открытых обращений</div>
+            <div class="wf-block kpi-value">12</div>
+            <div class="wf-block kpi-delta">▼ -3 к пред. мес.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- GRAFANA IFRAME -->
+      <div class="grafana-area">
+        <div class="grafana-header">
+          <div class="wf-block grafana-title">Grafana — финансовые дашборды</div>
+          <div class="wf-block grafana-badge">SSO via Keycloak</div>
+        </div>
+        <div class="grafana-charts">
+          <div class="wf-block grafana-main">
+            Динамика ссудного портфеля<br>(линейный график, 12 мес.)<br><br>
+            iframe → Grafana Dashboard<br>
+            Keycloak OIDC — отдельный вход не нужен
+          </div>
+          <div class="grafana-side">
+            <div class="wf-block grafana-mini">
+              Структура портфеля по районам<br>(pie chart)
+            </div>
+            <div class="wf-block grafana-mini">
+              Просрочка по срокам<br>(bar chart)
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PAYMENTS + ALERTS -->
+      <div class="two-col">
+
+        <!-- Предстоящие платежи -->
+        <div class="section-card">
+          <div class="section-header">
+            <div class="wf-block section-title">Предстоящие платежи (30 дней)</div>
+            <div class="wf-block section-action">Все платежи</div>
+          </div>
+          <div>
+            <div class="th-row" style="grid-template-columns: 1fr 80px 90px 70px">
+              <div class="wf-block th-cell">Заёмщик</div>
+              <div class="wf-block th-cell">Дата</div>
+              <div class="wf-block th-cell">Сумма</div>
+              <div class="wf-block th-cell">Статус</div>
+            </div>
+            <div class="tr-row" style="grid-template-columns: 1fr 80px 90px 70px">
+              <div class="wf-block td-cell">ИП Сейтжанов</div>
+              <div class="wf-block td-cell">01.04</div>
+              <div class="wf-block td-cell">420 000 ₸</div>
+              <div class="wf-block td-cell ok">10 дней</div>
+            </div>
+            <div class="tr-row" style="grid-template-columns: 1fr 80px 90px 70px">
+              <div class="wf-block td-cell">ТОО Астык-Дала</div>
+              <div class="wf-block td-cell">03.04</div>
+              <div class="wf-block td-cell">1 100 000 ₸</div>
+              <div class="wf-block td-cell ok">12 дней</div>
+            </div>
+            <div class="tr-row" style="grid-template-columns: 1fr 80px 90px 70px">
+              <div class="wf-block td-cell warn">КХ Абдуллаев</div>
+              <div class="wf-block td-cell warn">25.03</div>
+              <div class="wf-block td-cell warn">310 000 ₸</div>
+              <div class="wf-block td-cell warn">⚠ Просрочен</div>
+            </div>
+            <div class="tr-row" style="grid-template-columns: 1fr 80px 90px 70px">
+              <div class="wf-block td-cell">ИП Джаксыбеков</div>
+              <div class="wf-block td-cell">07.04</div>
+              <div class="wf-block td-cell">680 000 ₸</div>
+              <div class="wf-block td-cell ok">16 дней</div>
+            </div>
+            <div class="tr-row" style="grid-template-columns: 1fr 80px 90px 70px">
+              <div class="wf-block td-cell warn">КХ Байжанов</div>
+              <div class="wf-block td-cell warn">20.03</div>
+              <div class="wf-block td-cell warn">245 000 ₸</div>
+              <div class="wf-block td-cell warn">⚠ Просрочен</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Мониторинг залогов -->
+        <div class="section-card">
+          <div class="section-header">
+            <div class="wf-block section-title">Мониторинг залогов</div>
+            <div class="wf-block section-action">Все залоги</div>
+          </div>
+          <div class="alert-list">
+            <div class="alert-item">
+              <div class="alert-icon">🔴</div>
+              <div class="alert-body">
+                <div class="wf-block alert-title">Страховка истекает через 5 дней — Трактор John Deere (ИП Сейтжанов)</div>
+                <div class="wf-block alert-meta">Залог #Z-2024-045 · до 28 марта 2026</div>
+              </div>
+              <div class="wf-block alert-action">Карточка →</div>
+            </div>
+            <div class="alert-item">
+              <div class="alert-icon">🟡</div>
+              <div class="alert-body">
+                <div class="wf-block alert-title">Инвентаризация просрочена — Поголовье КРС (КХ Абдуллаев)</div>
+                <div class="wf-block alert-meta">Залог #Z-2024-031 · просрочено на 15 дней</div>
+              </div>
+              <div class="wf-block alert-action">Карточка →</div>
+            </div>
+            <div class="alert-item">
+              <div class="alert-icon">🟡</div>
+              <div class="alert-body">
+                <div class="wf-block alert-title">Страховка истекает через 18 дней — Зерновой склад (ТОО Астык-Дала)</div>
+                <div class="wf-block alert-meta">Залог #Z-2025-012 · до 10 апреля 2026</div>
+              </div>
+              <div class="wf-block alert-action">Карточка →</div>
+            </div>
+            <div class="alert-item" style="border-left-color:#bbb">
+              <div class="alert-icon">🟢</div>
+              <div class="alert-body">
+                <div class="wf-block alert-title">Земельный участок 1200 га (ИП Сейтжанов) — всё в норме</div>
+                <div class="wf-block alert-meta">Залог #Z-2026-001 · страховка до 10.01.2027</div>
+              </div>
+              <div class="wf-block alert-action">Карточка →</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+    </main>
+  </div>
+</div>
+</body>
+</html>

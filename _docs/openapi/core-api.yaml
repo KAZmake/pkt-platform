@@ -1,0 +1,925 @@
+openapi: 3.0.3
+info:
+  title: PKT Core API
+  description: |
+    Основной сервис: пользователи, программы кредитования, заявки, ЛК, уведомления.
+    Все защищённые эндпоинты требуют JWT токен Keycloak в заголовке Authorization.
+  version: 1.0.0
+
+servers:
+  - url: /api/v1
+    description: Текущая версия API
+
+security:
+  - BearerAuth: []
+
+tags:
+  - name: health
+    description: Проверка доступности сервиса
+  - name: profile
+    description: Профиль текущего пользователя
+  - name: programs
+    description: Программы кредитования (публичные)
+  - name: applications
+    description: Подача и отслеживание заявок
+  - name: lk-documents
+    description: ЛК — Документы заёмщика
+  - name: lk-payments
+    description: ЛК — График платежей
+  - name: lk-tickets
+    description: ЛК — Обращения
+  - name: notifications
+    description: Уведомления пользователя
+  - name: admin-users
+    description: Управление пользователями (admin)
+
+# ─── PATHS ────────────────────────────────────────────────────────────────────
+
+paths:
+
+  # ── Health ──────────────────────────────────────────────────────────────────
+
+  /health:
+    get:
+      tags: [health]
+      summary: Health check
+      security: []
+      responses:
+        "200":
+          description: Сервис работает
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+
+  # ── Profile ─────────────────────────────────────────────────────────────────
+
+  /profile:
+    get:
+      tags: [profile]
+      summary: Текущий пользователь
+      description: Роли — все авторизованные
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserProfile"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+    patch:
+      tags: [profile]
+      summary: Обновить профиль (телефон, имя)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateProfileRequest"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserProfile"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  # ── Loan Programs ────────────────────────────────────────────────────────────
+
+  /programs:
+    get:
+      tags: [programs]
+      summary: Список программ кредитования
+      description: Публичный эндпоинт. Фильтрация по типу деятельности, сумме, сроку.
+      security: []
+      parameters:
+        - name: activity_type
+          in: query
+          schema:
+            type: string
+            enum: [crop_farming, livestock, mixed]
+        - name: amount
+          in: query
+          schema:
+            type: number
+          description: Нужная сумма — фильтрует программы по min/max
+        - name: term_months
+          in: query
+          schema:
+            type: integer
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: per_page
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProgramListResponse"
+
+  /programs/{id}:
+    get:
+      tags: [programs]
+      summary: Детальная страница программы
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoanProgram"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  # ── Applications ─────────────────────────────────────────────────────────────
+
+  /applications:
+    post:
+      tags: [applications]
+      summary: Подать заявку
+      description: Роль — borrower
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateApplicationRequest"
+      responses:
+        "201":
+          description: Заявка создана
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Application"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+    get:
+      tags: [applications]
+      summary: Список заявок текущего заёмщика
+      description: Роль — borrower
+      parameters:
+        - name: status
+          in: query
+          schema:
+            $ref: "#/components/schemas/ApplicationStatus"
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: per_page
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApplicationListResponse"
+
+  /applications/{id}:
+    get:
+      tags: [applications]
+      summary: Статус и детали заявки
+      description: Роль — borrower (только свои), employee/expert/admin (все)
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Application"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  # ── LK — Documents ───────────────────────────────────────────────────────────
+
+  /lk/documents:
+    get:
+      tags: [lk-documents]
+      summary: Список документов заёмщика
+      description: Роль — borrower
+      parameters:
+        - name: owner_type
+          in: query
+          schema:
+            type: string
+            enum: [borrower, application, collateral]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DocumentListResponse"
+
+  /lk/documents/{id}/download:
+    get:
+      tags: [lk-documents]
+      summary: Получить presigned URL для скачивания
+      description: Роль — borrower (только свои документы)
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  url:
+                    type: string
+                    description: Presigned MinIO URL (TTL 15 мин)
+                  expires_at:
+                    type: string
+                    format: date-time
+
+  # ── LK — Payments ────────────────────────────────────────────────────────────
+
+  /lk/loans/{loan_id}/schedule:
+    get:
+      tags: [lk-payments]
+      summary: График платежей по кредиту
+      description: Роль — borrower. Данные из sync-svc (кэш Redis).
+      parameters:
+        - name: loan_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaymentScheduleResponse"
+
+  /lk/loans:
+    get:
+      tags: [lk-payments]
+      summary: Кредиты заёмщика
+      description: Роль — borrower
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoanListResponse"
+
+  # ── LK — Tickets ─────────────────────────────────────────────────────────────
+
+  /lk/tickets:
+    get:
+      tags: [lk-tickets]
+      summary: Список обращений заёмщика
+      description: Роль — borrower
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [open, in_progress, resolved, closed]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TicketListResponse"
+
+    post:
+      tags: [lk-tickets]
+      summary: Создать обращение
+      description: Роль — borrower
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateTicketRequest"
+      responses:
+        "201":
+          description: Обращение создано
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Ticket"
+
+  /lk/tickets/{id}:
+    get:
+      tags: [lk-tickets]
+      summary: Детали обращения с историей сообщений
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TicketDetail"
+
+  /lk/tickets/{id}/messages:
+    post:
+      tags: [lk-tickets]
+      summary: Отправить сообщение в обращение
+      description: Роль — borrower (только свои), employee (assigned)
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                body:
+                  type: string
+                attachment:
+                  type: string
+                  format: binary
+      responses:
+        "201":
+          description: Сообщение отправлено
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TicketMessage"
+
+  # ── Notifications ────────────────────────────────────────────────────────────
+
+  /notifications:
+    get:
+      tags: [notifications]
+      summary: Список уведомлений текущего пользователя
+      parameters:
+        - name: is_read
+          in: query
+          schema:
+            type: boolean
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotificationListResponse"
+
+  /notifications/{id}/read:
+    patch:
+      tags: [notifications]
+      summary: Отметить уведомление как прочитанное
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      responses:
+        "204":
+          description: OK
+
+  /notifications/read-all:
+    patch:
+      tags: [notifications]
+      summary: Отметить все уведомления как прочитанные
+      responses:
+        "204":
+          description: OK
+
+  # ── Admin — Users ────────────────────────────────────────────────────────────
+
+  /admin/users:
+    get:
+      tags: [admin-users]
+      summary: Список всех пользователей
+      description: Роль — admin
+      parameters:
+        - name: role
+          in: query
+          schema:
+            $ref: "#/components/schemas/UserRole"
+        - name: search
+          in: query
+          schema:
+            type: string
+          description: Поиск по email, имени, ИИН
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserListResponse"
+
+  /admin/users/{id}/role:
+    patch:
+      tags: [admin-users]
+      summary: Изменить роль пользователя
+      description: Роль — admin
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [role]
+              properties:
+                role:
+                  $ref: "#/components/schemas/UserRole"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserProfile"
+
+# ─── COMPONENTS ───────────────────────────────────────────────────────────────
+
+components:
+
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Keycloak JWT токен
+
+  parameters:
+    ID:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+  responses:
+    Unauthorized:
+      description: Не авторизован
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiError"
+    Forbidden:
+      description: Недостаточно прав
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiError"
+    NotFound:
+      description: Не найдено
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiError"
+    BadRequest:
+      description: Ошибка валидации
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiError"
+
+  schemas:
+
+    # ── Базовые ──────────────────────────────────────────────────────────────
+
+    ApiError:
+      type: object
+      properties:
+        code:
+          type: string
+          example: NOT_FOUND
+        message:
+          type: string
+          example: Ресурс не найден
+
+    Pagination:
+      type: object
+      properties:
+        page:
+          type: integer
+        per_page:
+          type: integer
+        total:
+          type: integer
+
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: ok
+        service:
+          type: string
+          example: core-api
+
+    # ── Пользователи ─────────────────────────────────────────────────────────
+
+    UserRole:
+      type: string
+      enum: [public, borrower, employee, expert, admin]
+
+    UserProfile:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+        role:
+          $ref: "#/components/schemas/UserRole"
+        first_name:
+          type: string
+        last_name:
+          type: string
+        phone:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+
+    UpdateProfileRequest:
+      type: object
+      properties:
+        first_name:
+          type: string
+        last_name:
+          type: string
+        phone:
+          type: string
+
+    UserListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/UserProfile"
+        meta:
+          $ref: "#/components/schemas/Pagination"
+
+    # ── Программы ────────────────────────────────────────────────────────────
+
+    ActivityType:
+      type: string
+      enum: [crop_farming, livestock, mixed]
+
+    LoanProgram:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        name_kz:
+          type: string
+        name_en:
+          type: string
+        rate:
+          type: number
+          description: "% годовых"
+        min_amount:
+          type: number
+        max_amount:
+          type: number
+        min_term_months:
+          type: integer
+        max_term_months:
+          type: integer
+        activity_types:
+          type: array
+          items:
+            $ref: "#/components/schemas/ActivityType"
+        is_active:
+          type: boolean
+
+    ProgramListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/LoanProgram"
+        meta:
+          $ref: "#/components/schemas/Pagination"
+
+    # ── Заявки ───────────────────────────────────────────────────────────────
+
+    ApplicationStatus:
+      type: string
+      enum:
+        - received
+        - primary_scoring
+        - security_check
+        - collateral_expertise
+        - legal_check
+        - credit_analysis
+        - credit_committee
+        - approved
+        - rejected
+        - revision
+        - documentation
+        - issued
+
+    Application:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        borrower_id:
+          type: string
+          format: uuid
+        program_id:
+          type: string
+          format: uuid
+        program:
+          $ref: "#/components/schemas/LoanProgram"
+        status:
+          $ref: "#/components/schemas/ApplicationStatus"
+        amount:
+          type: number
+        term_months:
+          type: integer
+        payment_type:
+          type: string
+          enum: [annuity, differentiated]
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    CreateApplicationRequest:
+      type: object
+      required: [program_id, amount, term_months, payment_type]
+      properties:
+        program_id:
+          type: string
+          format: uuid
+        amount:
+          type: number
+        term_months:
+          type: integer
+        payment_type:
+          type: string
+          enum: [annuity, differentiated]
+
+    ApplicationListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Application"
+        meta:
+          $ref: "#/components/schemas/Pagination"
+
+    # ── Документы ────────────────────────────────────────────────────────────
+
+    Document:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        mime_type:
+          type: string
+        size_bytes:
+          type: integer
+        owner_type:
+          type: string
+          enum: [borrower, application, collateral]
+        created_at:
+          type: string
+          format: date-time
+
+    DocumentListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Document"
+        meta:
+          $ref: "#/components/schemas/Pagination"
+
+    # ── Кредиты и платежи ────────────────────────────────────────────────────
+
+    Loan:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        one_c_id:
+          type: string
+        program_id:
+          type: string
+          format: uuid
+        amount:
+          type: number
+        rate:
+          type: number
+        term_months:
+          type: integer
+        issued_at:
+          type: string
+          format: date
+        expires_at:
+          type: string
+          format: date
+        status:
+          type: string
+          enum: [active, overdue, closed]
+        synced_at:
+          type: string
+          format: date-time
+
+    LoanListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Loan"
+
+    PaymentScheduleItem:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        due_date:
+          type: string
+          format: date
+        principal:
+          type: number
+        interest:
+          type: number
+        total:
+          type: number
+        is_paid:
+          type: boolean
+        paid_at:
+          type: string
+          format: date
+
+    PaymentScheduleResponse:
+      type: object
+      properties:
+        loan:
+          $ref: "#/components/schemas/Loan"
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/PaymentScheduleItem"
+
+    # ── Обращения ────────────────────────────────────────────────────────────
+
+    Ticket:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        type:
+          type: string
+          enum: [early_repayment, restructuring, prolongation, other]
+        subject:
+          type: string
+        status:
+          type: string
+          enum: [open, in_progress, resolved, closed]
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    TicketMessage:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        author_id:
+          type: string
+          format: uuid
+        body:
+          type: string
+        attachment_path:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+
+    TicketDetail:
+      allOf:
+        - $ref: "#/components/schemas/Ticket"
+        - type: object
+          properties:
+            messages:
+              type: array
+              items:
+                $ref: "#/components/schemas/TicketMessage"
+
+    CreateTicketRequest:
+      type: object
+      required: [type, subject, body]
+      properties:
+        type:
+          type: string
+          enum: [early_repayment, restructuring, prolongation, other]
+        subject:
+          type: string
+        body:
+          type: string
+
+    TicketListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Ticket"
+        meta:
+          $ref: "#/components/schemas/Pagination"
+
+    # ── Уведомления ──────────────────────────────────────────────────────────
+
+    Notification:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        type:
+          type: string
+          enum: [payment, status, ticket, system]
+        title:
+          type: string
+        body:
+          type: string
+        is_read:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+
+    NotificationListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Notification"
+        meta:
+          $ref: "#/components/schemas/Pagination"

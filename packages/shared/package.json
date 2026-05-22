@@ -9,7 +9,7 @@
   },
   "scripts": {
     "build": "tsc --project tsconfig.build.json",
-    "lint": "eslint .",
+    "lint": "eslint . --max-warnings 0",
     "type-check": "tsc --noEmit"
   },
   "devDependencies": {

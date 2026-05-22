@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PKT Wireframes</title>
+<style>
+  body { font-family: system-ui, sans-serif; background: #f4f4f4; margin: 0; padding: 40px; }
+  h1 { color: #1B4F8A; margin-bottom: 8px; }
+  p { color: #666; margin: 0 0 32px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; }
+  a.card {
+    display: block; background: #fff; border-radius: 12px; padding: 24px;
+    border: 1px solid #ddd; text-decoration: none; color: inherit;
+    transition: box-shadow .2s;
+  }
+  a.card:hover { box-shadow: 0 4px 16px rgba(0,0,0,.1); }
+  .card-num { font-size: 12px; color: #999; margin-bottom: 8px; }
+  .card-title { font-size: 18px; font-weight: 700; color: #1B4F8A; margin-bottom: 6px; }
+  .card-desc { font-size: 13px; color: #666; line-height: 1.5; }
+  .badge { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 99px; margin-top: 12px; background: #D6E4F5; color: #1B4F8A; }
+</style>
+</head>
+<body>
+<h1>ТОО «Первое кредитное товарищество» — Wireframes</h1>
+<p>Задача 0.6 Фазы 0. Структура экранов до начала вёрстки.</p>
+<div class="grid">
+  <a class="card" href="01-home.html">
+    <div class="card-num">Экран 01</div>
+    <div class="card-title">Главная страница</div>
+    <div class="card-desc">Публичная. Header, Hero, KPI-счётчики, калькулятор, мини-карта, партнёры, новости, чат-бот.</div>
+    <span class="badge">public</span>
+  </a>
+  <a class="card" href="02-lk-dashboard.html">
+    <div class="card-num">Экран 02</div>
+    <div class="card-title">Личный кабинет заёмщика</div>
+    <div class="card-desc">Дашборд ЛК: активный кредит, ближайший платёж, статус заявки, документы, уведомления.</div>
+    <span class="badge">borrower</span>
+  </a>
+  <a class="card" href="03-expertise-card.html">
+    <div class="card-num">Экран 03</div>
+    <div class="card-title">Карточка заявки (Экспертиза)</div>
+    <div class="card-desc">6 вкладок: Общие данные, Финансы, Залоги, Документы, Заключение, История. FSM-кнопки.</div>
+    <span class="badge">employee / expert</span>
+  </a>
+  <a class="card" href="04-analytics.html">
+    <div class="card-num">Экран 04</div>
+    <div class="card-title">Дашборд аналитики</div>
+    <div class="card-desc">KPI-карточки, Grafana iframe, предстоящие платежи, мониторинг залогов.</div>
+    <span class="badge">employee / admin</span>
+  </a>
+</div>
+</body>
+</html>

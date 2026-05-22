@@ -1,0 +1,73 @@
+# golangci-lint конфигурация для PKT Go-сервисов
+# Запуск: golangci-lint run ./...
+# Документация: https://golangci-lint.run/
+
+version: "2"
+
+run:
+  timeout: 5m
+  modules-download-mode: readonly
+
+linters:
+  enable:
+    - errcheck        # проверка необработанных ошибок
+    - gosimple        # упрощение кода
+    - govet           # подозрительные конструкции
+    - ineffassign     # неиспользуемые присваивания
+    - staticcheck     # статический анализ
+    - unused          # неиспользуемый код
+    - gofmt           # форматирование
+    - goimports       # сортировка импортов
+    - misspell        # опечатки в комментариях
+    - gocritic        # дополнительные проверки стиля
+    - gosec           # безопасность (SQL injection, hardcoded secrets и т.д.)
+    - noctx           # HTTP-запросы без context.Context
+    - bodyclose       # незакрытые http.Response.Body
+    - contextcheck    # неправильное использование context
+    - exhaustive      # неполные switch по enum
+    - exportloopref   # ссылки на переменные цикла
+
+linters-settings:
+  gofmt:
+    simplify: true
+
+  goimports:
+    local-prefixes: github.com/KAZmake/pkt-platform
+
+  govet:
+    enable:
+      - shadow
+
+  gosec:
+    excludes:
+      - G104  # Unhandled errors — покрывается errcheck
+    config:
+      G301: "0750"  # директории с правами 0750
+      G302: "0640"  # файлы с правами 0640
+
+  gocritic:
+    enabled-tags:
+      - diagnostic
+      - style
+      - performance
+    disabled-checks:
+      - commentedOutCode
+
+  misspell:
+    locale: US
+
+issues:
+  exclude-rules:
+    # Тесты — более мягкие правила
+    - path: "_test\\.go"
+      linters:
+        - gosec
+        - errcheck
+
+    # cmd/server/main.go — разрешаем log.Fatal
+    - path: "cmd/server/main\\.go"
+      linters:
+        - exhaustive
+
+  max-issues-per-linter: 50
+  max-same-issues: 10
