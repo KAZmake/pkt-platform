@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Wireframe 02 — Личный кабинет заёмщика</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: system-ui, sans-serif; background: #e8e8e8; color: #333; font-size: 13px; }
+  .wf-block {
+    background: #d0d0d0; border: 1px dashed #aaa; border-radius: 4px;
+    display: flex; align-items: center; justify-content: center;
+    color: #666; font-size: 12px; text-align: center; padding: 4px;
+  }
+  .wf-label { font-size: 10px; color: #999; text-transform: uppercase; letter-spacing: .05em; margin-bottom: 8px; }
+
+  /* Layout */
+  .page { max-width: 1280px; margin: 0 auto; background: #f0f0f0; }
+
+  /* Header */
+  header {
+    background: #b0b0b0; padding: 0 24px;
+    display: flex; align-items: center; gap: 12px; height: 56px;
+  }
+  .logo { width: 120px; height: 36px; }
+  .header-spacer { flex: 1; }
+
+  /* App shell */
+  .app-shell { display: grid; grid-template-columns: 220px 1fr; min-height: calc(100vh - 56px); }
+
+  /* Sidebar */
+  .sidebar { background: #c0c0c0; padding: 20px 12px; display: flex; flex-direction: column; gap: 4px; }
+  .sidebar-user { height: 64px; border-radius: 8px; margin-bottom: 16px; }
+  .sidebar-item {
+    height: 36px; border-radius: 6px; padding: 0 12px;
+    display: flex; align-items: center; gap: 8px; font-size: 12px; color: #555;
+  }
+  .sidebar-item.active { background: #999; color: #222; }
+  .sidebar-item:not(.active) { background: #b0b0b0; }
+  .sidebar-section { font-size: 10px; color: #888; text-transform: uppercase; padding: 12px 12px 4px; letter-spacing: .05em; }
+
+  /* Main */
+  .main { padding: 24px; display: flex; flex-direction: column; gap: 20px; }
+
+  /* Summary cards */
+  .summary-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  .summary-card { background: #c8c8c8; border-radius: 8px; padding: 16px; }
+  .card-title-line { height: 12px; width: 100px; margin-bottom: 12px; }
+  .card-value { height: 32px; margin-bottom: 8px; }
+  .card-sub { height: 12px; width: 140px; }
+  .card-badge { height: 20px; width: 80px; border-radius: 99px; margin-top: 8px; }
+
+  /* Progress bar */
+  .progress-wrap { margin-top: 10px; }
+  .progress-label { display: flex; justify-content: space-between; margin-bottom: 4px; }
+  .progress-bar { height: 8px; background: #aaa; border-radius: 4px; }
+  .progress-fill { height: 100%; width: 42%; background: #888; border-radius: 4px; }
+
+  /* Payment table */
+  .table-head { display: grid; grid-template-columns: 80px 100px 80px 80px 80px 80px; gap: 0; }
+  .table-row { display: grid; grid-template-columns: 80px 100px 80px 80px 80px 80px; gap: 0; margin-top: 2px; }
+  .th { height: 28px; background: #bbb; border-radius: 3px; margin: 1px; }
+  .td { height: 32px; border-radius: 3px; margin: 1px; }
+  .td.paid { background: #c0c0c0; }
+  .td.upcoming { background: #c8c8c8; }
+  .td.overdue { background: #b0b0b0; }
+
+  /* Notification list */
+  .notif-list { display: flex; flex-direction: column; gap: 8px; }
+  .notif-item { background: #c8c8c8; border-radius: 6px; padding: 10px 14px; display: flex; gap: 12px; align-items: flex-start; }
+  .notif-dot { width: 8px; height: 8px; border-radius: 50%; background: #888; margin-top: 4px; flex-shrink: 0; }
+  .notif-body { display: flex; flex-direction: column; gap: 4px; flex: 1; }
+  .notif-title-line { height: 14px; }
+  .notif-sub { height: 10px; width: 120px; }
+
+  /* Tickets */
+  .ticket-list { display: flex; flex-direction: column; gap: 8px; }
+  .ticket-item { background: #c8c8c8; border-radius: 6px; padding: 12px; display: flex; justify-content: space-between; align-items: center; }
+  .ticket-info { display: flex; flex-direction: column; gap: 4px; }
+  .ticket-title-line { height: 14px; width: 200px; }
+  .ticket-meta { height: 10px; width: 140px; }
+  .ticket-status { height: 22px; width: 80px; border-radius: 99px; }
+
+  /* Documents */
+  .doc-list { display: flex; flex-direction: column; gap: 6px; }
+  .doc-item { background: #c8c8c8; border-radius: 6px; padding: 10px 14px; display: flex; justify-content: space-between; align-items: center; }
+  .doc-left { display: flex; gap: 10px; align-items: center; }
+  .doc-icon { width: 32px; height: 32px; border-radius: 4px; }
+  .doc-info { display: flex; flex-direction: column; gap: 4px; }
+  .doc-name { height: 14px; width: 180px; }
+  .doc-size { height: 10px; width: 80px; }
+  .doc-btn { height: 28px; width: 80px; border-radius: 4px; }
+
+  /* Section card */
+  .section-card { background: #c8c8c8; border-radius: 8px; padding: 16px; }
+  .section-card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+  .section-card-title { height: 18px; width: 160px; }
+  .section-card-action { height: 28px; width: 100px; border-radius: 4px; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- HEADER -->
+  <header>
+    <div class="wf-block logo">Логотип КТ</div>
+    <div class="header-spacer"></div>
+    <div class="wf-block" style="width:160px;height:32px">🔔 Уведомления (3)</div>
+    <div class="wf-block" style="width:120px;height:32px">👤 Иванов И.И. ▼</div>
+  </header>
+
+  <div class="app-shell">
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+      <div class="wf-block sidebar-user">👤 Иванов Иван Иванович<br>Заёмщик</div>
+
+      <div class="sidebar-section">Кабинет</div>
+      <div class="sidebar-item active">📊 Дашборд</div>
+      <div class="sidebar-item">💳 Мои кредиты</div>
+      <div class="sidebar-item">📅 График платежей</div>
+      <div class="sidebar-item">📄 Документы</div>
+      <div class="sidebar-item">📝 Мои заявки</div>
+
+      <div class="sidebar-section">Сервис</div>
+      <div class="sidebar-item">💬 Обращения (2)</div>
+      <div class="sidebar-item">🔔 Уведомления</div>
+
+      <div class="sidebar-section" style="margin-top:auto">Аккаунт</div>
+      <div class="sidebar-item">⚙ Настройки</div>
+      <div class="sidebar-item">← Выйти</div>
+    </aside>
+
+    <!-- MAIN -->
+    <main class="main">
+
+      <!-- SUMMARY CARDS -->
+      <div>
+        <div class="wf-label">Сводка по кабинету</div>
+        <div class="summary-row">
+
+          <div class="summary-card">
+            <div class="wf-block card-title-line">Активный кредит</div>
+            <div class="wf-block card-value">50 000 000 ₸</div>
+            <div class="wf-block card-sub">Остаток долга: 38 200 000 ₸</div>
+            <div class="progress-wrap">
+              <div class="progress-label">
+                <div class="wf-block" style="height:10px;width:60px">Выплачено</div>
+                <div class="wf-block" style="height:10px;width:30px">42%</div>
+              </div>
+              <div class="progress-bar"><div class="progress-fill"></div></div>
+            </div>
+          </div>
+
+          <div class="summary-card">
+            <div class="wf-block card-title-line">Ближайший платёж</div>
+            <div class="wf-block card-value">420 000 ₸</div>
+            <div class="wf-block card-sub">01 апреля 2026 (через 10 дней)</div>
+            <div class="wf-block card-badge" style="background:#b8b8b8">Предстоит</div>
+          </div>
+
+          <div class="summary-card">
+            <div class="wf-block card-title-line">Статус заявки</div>
+            <div class="wf-block card-value" style="font-size:12px">Кредитный анализ</div>
+            <div class="wf-block card-sub">Подана: 10 марта 2026</div>
+            <div class="wf-block card-badge">В процессе</div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- PAYMENT SCHEDULE (фрагмент) -->
+      <div class="section-card">
+        <div class="section-card-header">
+          <div class="wf-block section-card-title">График платежей</div>
+          <div class="wf-block section-card-action">Все платежи →</div>
+        </div>
+        <div class="table-head">
+          <div class="wf-block th">№</div>
+          <div class="wf-block th">Дата</div>
+          <div class="wf-block th">Основной</div>
+          <div class="wf-block th">Проценты</div>
+          <div class="wf-block th">Итого</div>
+          <div class="wf-block th">Статус</div>
+        </div>
+        <div class="table-row">
+          <div class="wf-block td paid">1</div>
+          <div class="wf-block td paid">01.01.2026</div>
+          <div class="wf-block td paid">380 000</div>
+          <div class="wf-block td paid">40 000</div>
+          <div class="wf-block td paid">420 000</div>
+          <div class="wf-block td paid">✓ Оплачен</div>
+        </div>
+        <div class="table-row">
+          <div class="wf-block td paid">2</div>
+          <div class="wf-block td paid">01.02.2026</div>
+          <div class="wf-block td paid">383 000</div>
+          <div class="wf-block td paid">37 000</div>
+          <div class="wf-block td paid">420 000</div>
+          <div class="wf-block td paid">✓ Оплачен</div>
+        </div>
+        <div class="table-row">
+          <div class="wf-block td paid">3</div>
+          <div class="wf-block td paid">01.03.2026</div>
+          <div class="wf-block td paid">386 000</div>
+          <div class="wf-block td paid">34 000</div>
+          <div class="wf-block td paid">420 000</div>
+          <div class="wf-block td paid">✓ Оплачен</div>
+        </div>
+        <div class="table-row">
+          <div class="wf-block td upcoming" style="background:#d8d8d8">4</div>
+          <div class="wf-block td upcoming" style="background:#d8d8d8">01.04.2026</div>
+          <div class="wf-block td upcoming" style="background:#d8d8d8">389 000</div>
+          <div class="wf-block td upcoming" style="background:#d8d8d8">31 000</div>
+          <div class="wf-block td upcoming" style="background:#d8d8d8">420 000</div>
+          <div class="wf-block td upcoming" style="background:#d8d8d8">⏳ Предстоит</div>
+        </div>
+      </div>
+
+      <!-- DOCUMENTS + NOTIFICATIONS -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+
+        <!-- Documents -->
+        <div class="section-card">
+          <div class="section-card-header">
+            <div class="wf-block section-card-title">Мои документы</div>
+            <div class="wf-block section-card-action">Все документы</div>
+          </div>
+          <div class="doc-list">
+            <div class="doc-item">
+              <div class="doc-left">
+                <div class="wf-block doc-icon">PDF</div>
+                <div class="doc-info">
+                  <div class="wf-block doc-name">Договор займа №123</div>
+                  <div class="wf-block doc-size">245 КБ · 10.01.2026</div>
+                </div>
+              </div>
+              <div class="wf-block doc-btn">Скачать ↓</div>
+            </div>
+            <div class="doc-item">
+              <div class="doc-left">
+                <div class="wf-block doc-icon">PDF</div>
+                <div class="doc-info">
+                  <div class="wf-block doc-name">График платежей</div>
+                  <div class="wf-block doc-size">180 КБ · 10.01.2026</div>
+                </div>
+              </div>
+              <div class="wf-block doc-btn">Скачать ↓</div>
+            </div>
+            <div class="doc-item">
+              <div class="doc-left">
+                <div class="wf-block doc-icon">PDF</div>
+                <div class="doc-info">
+                  <div class="wf-block doc-name">Договор залога земли</div>
+                  <div class="wf-block doc-size">310 КБ · 10.01.2026</div>
+                </div>
+              </div>
+              <div class="wf-block doc-btn">Скачать ↓</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Notifications -->
+        <div class="section-card">
+          <div class="section-card-header">
+            <div class="wf-block section-card-title">Уведомления</div>
+            <div class="wf-block section-card-action">Все уведомл.</div>
+          </div>
+          <div class="notif-list">
+            <div class="notif-item">
+              <div class="notif-dot" style="background:#666"></div>
+              <div class="notif-body">
+                <div class="wf-block notif-title-line">Заявка перешла на этап: Кредитный анализ</div>
+                <div class="wf-block notif-sub">Сегодня, 10:45</div>
+              </div>
+            </div>
+            <div class="notif-item">
+              <div class="notif-dot" style="background:#666"></div>
+              <div class="notif-body">
+                <div class="wf-block notif-title-line">Ответ на обращение №45</div>
+                <div class="wf-block notif-sub">Вчера, 15:30</div>
+              </div>
+            </div>
+            <div class="notif-item">
+              <div class="notif-dot" style="background:#aaa"></div>
+              <div class="notif-body">
+                <div class="wf-block notif-title-line">Платёж 420 000 ₸ через 10 дней</div>
+                <div class="wf-block notif-sub">22 марта, 09:00</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- TICKETS -->
+      <div class="section-card">
+        <div class="section-card-header">
+          <div class="wf-block section-card-title">Мои обращения</div>
+          <div class="wf-block section-card-action">+ Новое обращение</div>
+        </div>
+        <div class="ticket-list">
+          <div class="ticket-item">
+            <div class="ticket-info">
+              <div class="wf-block ticket-title-line">Запрос на досрочное погашение</div>
+              <div class="wf-block ticket-meta">№45 · Открыто 18 марта · Сотрудник: Петров А.</div>
+            </div>
+            <div class="wf-block ticket-status" style="background:#b0b0b0">В работе</div>
+          </div>
+          <div class="ticket-item">
+            <div class="ticket-info">
+              <div class="wf-block ticket-title-line">Уточнение по графику платежей</div>
+              <div class="wf-block ticket-meta">№38 · Закрыто 05 марта</div>
+            </div>
+            <div class="wf-block ticket-status">Решено ✓</div>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+</body>
+</html>
