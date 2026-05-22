@@ -1,7 +1,7 @@
 .PHONY: up down restart logs ps health clean migrate migrate-down
 
 COMPOSE  = docker compose -f infra/docker-compose.yml --env-file infra/.env.docker
-DB_URL   = postgres://pkt:pkt_secret@localhost:5432/pkt_db?sslmode=disable
+DB_URL   = postgres://pkt:pkt_secret@localhost:5433/pkt_db?sslmode=disable
 MIGRATE  = docker run --rm --network pkt_pkt-net \
            -v $(PWD)/apps/api/core-api/migrations:/core \
            -v $(PWD)/apps/api/expertise-svc/migrations:/expertise \
@@ -43,7 +43,7 @@ health:
 	@echo "=== Valkey ===" && docker exec pkt-valkey valkey-cli ping
 	@echo "=== MinIO ===" && docker exec pkt-minio mc ready local 2>/dev/null || echo "MinIO: check console at http://localhost:9001"
 	@echo "=== NATS ===" && curl -s http://localhost:8222/healthz | grep -o '"status":"ok"' || echo "NATS: not ready"
-	@echo "=== Keycloak ===" && curl -sf http://localhost:8180/health/ready > /dev/null && echo "OK" || echo "NOT READY"
+	@echo "=== Keycloak ===" && curl -sf http://localhost:8180/realms/master > /dev/null && echo "OK" || echo "NOT READY"
 	@echo "=== Directus ===" && curl -sf http://localhost:8055/server/health > /dev/null && echo "OK" || echo "NOT READY"
 
 # ─── Миграции (golang-migrate через Docker) ───────────────────────────────────
