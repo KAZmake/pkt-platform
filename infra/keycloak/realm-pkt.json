@@ -14,6 +14,7 @@
 
   "roles": {
     "realm": [
+      { "name": "public", "description": "Публичный посетитель — без авторизации" },
       { "name": "borrower", "description": "Заёмщик — личный кабинет" },
       { "name": "employee", "description": "Сотрудник — аналитика, экспертиза, инлайн-редактор" },
       { "name": "expert", "description": "Эксперт / КК — экспертиза залогов, голосование" },
