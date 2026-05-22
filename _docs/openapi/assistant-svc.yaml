@@ -1,0 +1,167 @@
+openapi: 3.0.3
+info:
+  title: PKT Assistant Service API
+  description: |
+    Go-прокси к Anthropic API (Claude). Rate limiting по IP.
+    Доступен всем пользователям включая неавторизованных.
+  version: 1.0.0
+
+servers:
+  - url: /api/v1
+    description: Текущая версия API
+
+tags:
+  - name: assistant
+    description: Виртуальный ассистент
+
+paths:
+
+  /health:
+    get:
+      tags: [assistant]
+      summary: Health check
+      security: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+
+  /assistant/chat:
+    post:
+      tags: [assistant]
+      summary: Отправить сообщение ассистенту
+      description: |
+        Публичный эндпоинт (авторизация опциональна).
+        Rate limit: 20 запросов/минуту по IP.
+        Для авторизованных заёмщиков — контекст ЛК добавляется автоматически.
+      security: []
+      parameters:
+        - name: Authorization
+          in: header
+          required: false
+          schema:
+            type: string
+          description: Опциональный JWT для контекста ЛК заёмщика
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChatRequest"
+      responses:
+        "200":
+          description: Ответ ассистента
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChatResponse"
+        "429":
+          description: Rate limit превышен
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "503":
+          description: Anthropic API недоступен
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /assistant/chat/ticket:
+    post:
+      tags: [assistant]
+      summary: Создать тикет из чата ассистента
+      description: |
+        Роль — borrower.
+        Когда ассистент не может решить вопрос — передаёт живому сотруднику.
+        Создаёт обращение в core-api и уведомляет сотрудника через NATS.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateTicketFromChatRequest"
+      responses:
+        "201":
+          description: Тикет создан
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ticket_id:
+                    type: string
+                    format: uuid
+                  message:
+                    type: string
+                    example: Ваше обращение передано сотруднику. Ожидайте ответа.
+
+components:
+
+  schemas:
+
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: ok
+        service:
+          type: string
+          example: assistant-svc
+
+    ApiError:
+      type: object
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+
+    ChatMessage:
+      type: object
+      required: [role, content]
+      properties:
+        role:
+          type: string
+          enum: [user, assistant]
+        content:
+          type: string
+
+    ChatRequest:
+      type: object
+      required: [messages]
+      properties:
+        messages:
+          type: array
+          items:
+            $ref: "#/components/schemas/ChatMessage"
+          description: История диалога (последние N сообщений)
+        session_id:
+          type: string
+          description: Опциональный ID сессии для контекста
+
+    ChatResponse:
+      type: object
+      properties:
+        message:
+          $ref: "#/components/schemas/ChatMessage"
+        session_id:
+          type: string
+        suggest_ticket:
+          type: boolean
+          description: true — ассистент рекомендует создать тикет для живого сотрудника
+
+    CreateTicketFromChatRequest:
+      type: object
+      required: [session_id, subject]
+      properties:
+        session_id:
+          type: string
+        subject:
+          type: string
+          description: Тема обращения (авто или выбрана пользователем)

@@ -1,0 +1,878 @@
+openapi: 3.0.3
+info:
+  title: PKT Expertise Service API
+  description: |
+    BPM-модуль экспертизы: FSM заявок, рабочее место эксперта, залоги, КК.
+    Все эндпоинты требуют JWT токен Keycloak. Минимальная роль — employee.
+  version: 1.0.0
+
+servers:
+  - url: /api/v1
+    description: Текущая версия API
+
+security:
+  - BearerAuth: []
+
+tags:
+  - name: queue
+    description: Очередь заявок по ролям
+  - name: application-card
+    description: Карточка заявки (все вкладки)
+  - name: fsm
+    description: Переходы статусов (FSM)
+  - name: collaterals
+    description: Залоги (самостоятельные сущности)
+  - name: conclusions
+    description: Заключения экспертов
+  - name: committee
+    description: Кредитный комитет
+
+paths:
+
+  /health:
+    get:
+      tags: [queue]
+      summary: Health check
+      security: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+
+  # ── Очередь ──────────────────────────────────────────────────────────────────
+
+  /expertise/queue:
+    get:
+      tags: [queue]
+      summary: Очередь заявок для текущего сотрудника/эксперта
+      description: |
+        Роль — employee/expert/admin.
+        Возвращает заявки на том этапе, за который отвечает текущий пользователь.
+      parameters:
+        - name: status
+          in: query
+          schema:
+            $ref: "#/components/schemas/ApplicationStatus"
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: [created_at, updated_at, amount]
+            default: created_at
+        - name: order
+          in: query
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: asc
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: per_page
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApplicationQueueResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  # ── Карточка заявки ──────────────────────────────────────────────────────────
+
+  /expertise/applications/{id}:
+    get:
+      tags: [application-card]
+      summary: Полная карточка заявки
+      description: |
+        Роль — employee/expert/admin.
+        Возвращает все данные карточки (вкладки 1–6).
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApplicationCard"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /expertise/applications/{id}/general:
+    get:
+      tags: [application-card]
+      summary: Вкладка 1 — Общие данные
+      description: Заявитель, хозяйство, условия. Формируется из карточки заёмщика.
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApplicationGeneral"
+
+  /expertise/applications/{id}/financial:
+    get:
+      tags: [application-card]
+      summary: Вкладка 2 — Финансовый анализ
+      description: Данные из 1С (sync-svc), кредитная история, платёжеспособность.
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApplicationFinancial"
+
+  /expertise/applications/{id}/collaterals:
+    get:
+      tags: [application-card]
+      summary: Вкладка 3 — Залоговое обеспечение
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CollateralWithStatus"
+
+    post:
+      tags: [application-card]
+      summary: Привязать залог к заявке
+      description: Роль — employee/expert
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [collateral_id]
+              properties:
+                collateral_id:
+                  type: string
+                  format: uuid
+      responses:
+        "201":
+          description: Залог привязан
+
+  /expertise/applications/{id}/collaterals/{collateral_id}/release:
+    post:
+      tags: [application-card]
+      summary: Высвободить залог из заявки
+      description: Роль — employee/expert/admin
+      parameters:
+        - $ref: "#/components/parameters/ID"
+        - name: collateral_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Залог высвобождён
+
+  /expertise/applications/{id}/documents:
+    get:
+      tags: [application-card]
+      summary: Вкладка 4 — Документы заявки
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Document"
+
+    post:
+      tags: [application-card]
+      summary: Загрузить документ к заявке
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file, name]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                name:
+                  type: string
+      responses:
+        "201":
+          description: Документ загружен
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Document"
+
+  /expertise/applications/{id}/history:
+    get:
+      tags: [application-card]
+      summary: Вкладка 6 — Аудит-лог заявки
+      description: Только INSERT записи — кто/что/когда. Никогда не редактируется.
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ApplicationHistoryEntry"
+
+  # ── FSM переходы ─────────────────────────────────────────────────────────────
+
+  /expertise/applications/{id}/transition:
+    post:
+      tags: [fsm]
+      summary: Перевести заявку на следующий этап
+      description: |
+        Роль — employee/expert/admin (только свой этап).
+        Создаёт запись в application_history (INSERT ONLY).
+        Публикует событие в NATS → уведомление следующему исполнителю.
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TransitionRequest"
+      responses:
+        "200":
+          description: Статус изменён
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApplicationCard"
+        "400":
+          description: Переход невозможен (нарушение FSM)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  # ── Залоги ───────────────────────────────────────────────────────────────────
+
+  /expertise/collaterals:
+    get:
+      tags: [collaterals]
+      summary: Список всех залогов
+      description: Роль — employee/expert/admin
+      parameters:
+        - name: type
+          in: query
+          schema:
+            $ref: "#/components/schemas/CollateralType"
+        - name: is_released
+          in: query
+          schema:
+            type: boolean
+        - name: borrower_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Collateral"
+
+    post:
+      tags: [collaterals]
+      summary: Создать залог
+      description: Роль — employee/expert
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCollateralRequest"
+      responses:
+        "201":
+          description: Залог создан
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Collateral"
+
+  /expertise/collaterals/{id}:
+    get:
+      tags: [collaterals]
+      summary: Карточка залога
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Collateral"
+
+    patch:
+      tags: [collaterals]
+      summary: Обновить данные залога (страховка, инвентаризация)
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateCollateralRequest"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Collateral"
+
+  # ── Заключения экспертов ─────────────────────────────────────────────────────
+
+  /expertise/applications/{id}/conclusions:
+    get:
+      tags: [conclusions]
+      summary: Вкладка 5 — Заключения по заявке
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ExpertConclusion"
+
+    post:
+      tags: [conclusions]
+      summary: Сохранить заключение эксперта
+      description: Роль — employee/expert (только свой этап)
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: "#/components/schemas/CreateConclusionRequest"
+      responses:
+        "201":
+          description: Заключение сохранено
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExpertConclusion"
+
+  # ── Кредитный комитет ────────────────────────────────────────────────────────
+
+  /expertise/committee/applications:
+    get:
+      tags: [committee]
+      summary: Заявки на рассмотрении КК
+      description: Роль — expert/admin. Только заявки в статусе credit_committee.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ApplicationQueueItem"
+
+  /expertise/applications/{id}/vote:
+    post:
+      tags: [committee]
+      summary: Проголосовать на КК
+      description: Роль — expert/admin
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VoteRequest"
+      responses:
+        "201":
+          description: Голос принят
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CommitteeVote"
+
+  /expertise/applications/{id}/protocol:
+    post:
+      tags: [committee]
+      summary: Сформировать протокол КК (PDF)
+      description: Роль — expert/admin. Генерирует PDF и сохраняет в MinIO.
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  download_url:
+                    type: string
+                    description: Presigned URL протокола (PDF)
+
+# ─── COMPONENTS ───────────────────────────────────────────────────────────────
+
+components:
+
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    ID:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+  responses:
+    Unauthorized:
+      description: Не авторизован
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiError"
+    Forbidden:
+      description: Недостаточно прав
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiError"
+    NotFound:
+      description: Не найдено
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiError"
+
+  schemas:
+
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: ok
+        service:
+          type: string
+          example: expertise-svc
+
+    ApiError:
+      type: object
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+
+    ApplicationStatus:
+      type: string
+      enum:
+        - received
+        - primary_scoring
+        - security_check
+        - collateral_expertise
+        - legal_check
+        - credit_analysis
+        - credit_committee
+        - approved
+        - rejected
+        - revision
+        - documentation
+        - issued
+
+    CollateralType:
+      type: string
+      enum: [land, equipment, livestock, real_estate, other]
+
+    Document:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        mime_type:
+          type: string
+        size_bytes:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+
+    ApplicationQueueItem:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        borrower_name:
+          type: string
+        program_name:
+          type: string
+        amount:
+          type: number
+        status:
+          $ref: "#/components/schemas/ApplicationStatus"
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    ApplicationQueueResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/ApplicationQueueItem"
+        meta:
+          type: object
+          properties:
+            page:
+              type: integer
+            per_page:
+              type: integer
+            total:
+              type: integer
+
+    ApplicationGeneral:
+      type: object
+      properties:
+        borrower:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            full_name:
+              type: string
+            inn:
+              type: string
+            org_name:
+              type: string
+            activity_type:
+              type: string
+            phone:
+              type: string
+            email:
+              type: string
+        farm:
+          type: object
+          properties:
+            name:
+              type: string
+            district:
+              type: string
+            land_area_ha:
+              type: number
+        program:
+          type: object
+          properties:
+            name:
+              type: string
+            rate:
+              type: number
+        amount:
+          type: number
+        term_months:
+          type: integer
+        payment_type:
+          type: string
+          enum: [annuity, differentiated]
+
+    ApplicationFinancial:
+      type: object
+      properties:
+        loans_history:
+          type: array
+          items:
+            type: object
+            properties:
+              one_c_id:
+                type: string
+              amount:
+                type: number
+              status:
+                type: string
+              issued_at:
+                type: string
+                format: date
+        current_debts:
+          type: array
+          items:
+            type: object
+            properties:
+              type:
+                type: string
+              amount:
+                type: number
+              days_overdue:
+                type: integer
+        creditworthiness_score:
+          type: number
+          description: Расчётный показатель платёжеспособности
+
+    Collateral:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        type:
+          $ref: "#/components/schemas/CollateralType"
+        description:
+          type: string
+        estimated_value:
+          type: number
+        cadastral_number:
+          type: string
+        insurance_expiry:
+          type: string
+          format: date
+        last_inventory_date:
+          type: string
+          format: date
+        is_released:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+
+    CollateralWithStatus:
+      allOf:
+        - $ref: "#/components/schemas/Collateral"
+        - type: object
+          properties:
+            attached_at:
+              type: string
+              format: date-time
+            released_at:
+              type: string
+              format: date-time
+
+    CreateCollateralRequest:
+      type: object
+      required: [type, description, estimated_value]
+      properties:
+        type:
+          $ref: "#/components/schemas/CollateralType"
+        description:
+          type: string
+        estimated_value:
+          type: number
+        cadastral_number:
+          type: string
+        insurance_expiry:
+          type: string
+          format: date
+        last_inventory_date:
+          type: string
+          format: date
+
+    UpdateCollateralRequest:
+      type: object
+      properties:
+        estimated_value:
+          type: number
+        insurance_expiry:
+          type: string
+          format: date
+        last_inventory_date:
+          type: string
+          format: date
+
+    ApplicationHistoryEntry:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        from_status:
+          $ref: "#/components/schemas/ApplicationStatus"
+        to_status:
+          $ref: "#/components/schemas/ApplicationStatus"
+        actor_name:
+          type: string
+        actor_role:
+          type: string
+        comment:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+
+    TransitionRequest:
+      type: object
+      required: [to_status]
+      properties:
+        to_status:
+          $ref: "#/components/schemas/ApplicationStatus"
+        comment:
+          type: string
+        assignee_id:
+          type: string
+          format: uuid
+          description: Назначить исполнителя следующего этапа
+
+    ExpertConclusion:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        expert_name:
+          type: string
+        stage:
+          type: string
+          enum: [collateral_expertise, legal_check, credit_analysis]
+        risks:
+          type: object
+          description: Чекбоксы рисков (произвольная структура JSONB)
+        conclusion_text:
+          type: string
+        result:
+          type: string
+          enum: [approved, rejected, revision]
+        file_path:
+          type: string
+          description: MinIO PDF
+        created_at:
+          type: string
+          format: date-time
+
+    CreateConclusionRequest:
+      type: object
+      required: [stage, conclusion_text, result]
+      properties:
+        stage:
+          type: string
+          enum: [collateral_expertise, legal_check, credit_analysis]
+        risks:
+          type: string
+          description: JSON строка с чекбоксами рисков
+        conclusion_text:
+          type: string
+        result:
+          type: string
+          enum: [approved, rejected, revision]
+        file:
+          type: string
+          format: binary
+          description: PDF заключения (опционально)
+
+    CommitteeVote:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        expert_name:
+          type: string
+        vote:
+          type: string
+          enum: [approved, rejected, abstained]
+        comment:
+          type: string
+        signed_at:
+          type: string
+          format: date-time
+
+    VoteRequest:
+      type: object
+      required: [vote]
+      properties:
+        vote:
+          type: string
+          enum: [approved, rejected, abstained]
+        comment:
+          type: string
+
+    ApplicationCard:
+      type: object
+      description: Полная карточка заявки (все вкладки)
+      properties:
+        id:
+          type: string
+          format: uuid
+        status:
+          $ref: "#/components/schemas/ApplicationStatus"
+        amount:
+          type: number
+        term_months:
+          type: integer
+        payment_type:
+          type: string
+        assignee_id:
+          type: string
+          format: uuid
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
