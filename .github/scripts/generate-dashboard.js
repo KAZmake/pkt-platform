@@ -2,8 +2,12 @@
 // .github/scripts/generate-dashboard.js
 // Парсит _docs/roadmap.md и генерирует docs-site/index.html
 
-const fs = require('fs');
-const path = require('path');
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const roadmapPath = path.join(process.cwd(), '_docs', 'roadmap.md');
 const outDir = path.join(process.cwd(), 'docs-site');
@@ -18,7 +22,7 @@ const lines = raw.split('\n');
 const statusBlock = {};
 const statusMatch = raw.match(/```\n([\s\S]*?)```/);
 if (statusMatch) {
-  statusMatch[1].split('\n').forEach(line => {
+  statusMatch[1].split('\n').forEach((line) => {
     const m = line.match(/^(.+?):\s+(.+)$/);
     if (m) statusBlock[m[1].trim()] = m[2].trim();
   });
@@ -29,11 +33,11 @@ const phases = [];
 let currentPhase = null;
 let currentSubphase = null;
 
-const phaseRe  = /^## (Фаза \d+)\s*[—–]\s*(.+?)\s*\(([^)]+)\)\s*`\[(.)\]/;
-const subRe    = /^### (\d+\.\d+)\.\s+(.+)/;
-const taskRe   = /^\|\s*(\d+[\.\d]*)\s*\|\s*(.+?)\s*\|\s*`\[(.)\]`\s*\|/;
+const phaseRe = /^## (Фаза \d+)\s*[—–]\s*(.+?)\s*\(([^)]+)\)\s*`\[(.)\]/;
+const subRe = /^### (\d+\.\d+)\.\s+(.+)/;
+const taskRe = /^\|\s*(\d+[\.\d]*)\s*\|\s*(.+?)\s*\|\s*`\[(.)\]`\s*\|/;
 
-lines.forEach(line => {
+lines.forEach((line) => {
   const pm = line.match(phaseRe);
   if (pm) {
     currentPhase = {
@@ -56,7 +60,11 @@ lines.forEach(line => {
   }
   const tm = line.match(taskRe);
   if (tm && currentPhase) {
-    const task = { num: tm[1], title: tm[2].replace(/\*\*/g,'').split('|')[0].trim(), done: tm[3] === 'x' };
+    const task = {
+      num: tm[1],
+      title: tm[2].replace(/\*\*/g, '').split('|')[0].trim(),
+      done: tm[3] === 'x',
+    };
     if (currentSubphase) currentSubphase.tasks.push(task);
     else currentPhase.tasks.push(task);
   }
@@ -64,35 +72,46 @@ lines.forEach(line => {
 
 // ── Вычисляем прогресс ──────────────────────────────────────────────────────
 function phaseStats(phase) {
-  const allTasks = [
-    ...phase.tasks,
-    ...phase.subphases.flatMap(s => s.tasks),
-  ];
+  const allTasks = [...phase.tasks, ...phase.subphases.flatMap((s) => s.tasks)];
   const total = allTasks.length;
-  const done  = allTasks.filter(t => t.done).length;
+  const done = allTasks.filter((t) => t.done).length;
   return { total, done, pct: total ? Math.round((done / total) * 100) : 0 };
 }
 
 const totalTasks = phases.reduce((acc, p) => acc + phaseStats(p).total, 0);
-const doneTasks  = phases.reduce((acc, p) => acc + phaseStats(p).done, 0);
+const doneTasks = phases.reduce((acc, p) => acc + phaseStats(p).done, 0);
 const overallPct = totalTasks ? Math.round((doneTasks / totalTasks) * 100) : 0;
 
 const currentPhaseName = statusBlock['Фаза'] || '—';
-const lastDone   = statusBlock['Последнее'] || '—';
-const nextStep   = statusBlock['Следующий шаг'] || '—';
-const blocked    = statusBlock['Заблокировано'] || '—';
-const status     = statusBlock['Статус'] || '—';
+const lastDone = statusBlock['Последнее'] || '—';
+const nextStep = statusBlock['Следующий шаг'] || '—';
+const blocked = statusBlock['Заблокировано'] || '—';
+const status = statusBlock['Статус'] || '—';
 
 // ── Цвета фаз ───────────────────────────────────────────────────────────────
 const phaseColors = [
-  '#1B4F8A','#166534','#1B4F8A','#4C1D95',
-  '#134E4A','#92400E','#1B4F8A','#134E4A',
-  '#4C1D95','#1B4F8A',
+  '#1B4F8A',
+  '#166534',
+  '#1B4F8A',
+  '#4C1D95',
+  '#134E4A',
+  '#92400E',
+  '#1B4F8A',
+  '#134E4A',
+  '#4C1D95',
+  '#1B4F8A',
 ];
 const phaseBg = [
-  '#D6E4F5','#DCFCE7','#D6E4F5','#EDE9FE',
-  '#CCFBF1','#FEF3C7','#D6E4F5','#CCFBF1',
-  '#EDE9FE','#D6E4F5',
+  '#D6E4F5',
+  '#DCFCE7',
+  '#D6E4F5',
+  '#EDE9FE',
+  '#CCFBF1',
+  '#FEF3C7',
+  '#D6E4F5',
+  '#CCFBF1',
+  '#EDE9FE',
+  '#D6E4F5',
 ];
 
 // ── Генерируем карточки фаз ─────────────────────────────────────────────────
@@ -104,7 +123,7 @@ function renderTask(t) {
 }
 
 function renderSubphase(sp) {
-  const done = sp.tasks.filter(t=>t.done).length;
+  const done = sp.tasks.filter((t) => t.done).length;
   const total = sp.tasks.length;
   return `
     <div class="subphase">
@@ -119,12 +138,13 @@ function renderSubphase(sp) {
 function renderPhase(p, i) {
   const { total, done, pct } = phaseStats(p);
   const color = phaseColors[i] || '#1B4F8A';
-  const bg    = phaseBg[i]    || '#D6E4F5';
-  const statusLabel = done === total && total > 0
-    ? `<span class="badge badge-done">Готово</span>`
-    : done > 0
-      ? `<span class="badge badge-active">В процессе</span>`
-      : `<span class="badge badge-todo">Не начато</span>`;
+  const bg = phaseBg[i] || '#D6E4F5';
+  const statusLabel =
+    done === total && total > 0
+      ? `<span class="badge badge-done">Готово</span>`
+      : done > 0
+        ? `<span class="badge badge-active">В процессе</span>`
+        : `<span class="badge badge-todo">Не начато</span>`;
 
   const allFlat = p.subphases.length === 0;
 
@@ -145,9 +165,10 @@ function renderPhase(p, i) {
     </div>
     <div class="phase-progress-bar"><div class="phase-progress-fill" style="width:${pct}%"></div></div>
     <div class="phase-body">
-      ${allFlat
-        ? p.tasks.map(renderTask).join('')
-        : p.subphases.map(renderSubphase).join('') + p.tasks.map(renderTask).join('')
+      ${
+        allFlat
+          ? p.tasks.map(renderTask).join('')
+          : p.subphases.map(renderSubphase).join('') + p.tasks.map(renderTask).join('')
       }
     </div>
     <div class="phase-footer">${done} из ${total} задач выполнено</div>
@@ -156,13 +177,17 @@ function renderPhase(p, i) {
 
 function escHtml(s) {
   return String(s)
-    .replace(/&/g,'&amp;')
-    .replace(/</g,'&lt;')
-    .replace(/>/g,'&gt;')
-    .replace(/"/g,'&quot;');
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
 }
 
-const now = new Date().toLocaleString('ru-RU', { timeZone: 'Asia/Oral', dateStyle: 'long', timeStyle: 'short' });
+const now = new Date().toLocaleString('ru-RU', {
+  timeZone: 'Asia/Oral',
+  dateStyle: 'long',
+  timeStyle: 'short',
+});
 
 // ── Собираем HTML ────────────────────────────────────────────────────────────
 const html = `<!DOCTYPE html>
@@ -459,11 +484,15 @@ const html = `<!DOCTYPE html>
     <div class="status-card-label">Следующий шаг</div>
     <div class="status-card-value">${escHtml(nextStep)}</div>
   </div>
-  ${blocked !== '—' ? `
+  ${
+    blocked !== '—'
+      ? `
   <div class="status-card" style="border-color:#FCA5A5;background:#FEF2F2">
     <div class="status-card-label" style="color:#991B1B">⚠ Заблокировано</div>
     <div class="status-card-value" style="color:#991B1B">${escHtml(blocked)}</div>
-  </div>` : ''}
+  </div>`
+      : ''
+  }
 </div>
 
 <div class="phases-grid">
