@@ -1,4 +1,4 @@
-.PHONY: up down restart logs ps health clean migrate migrate-down
+.PHONY: up down restart logs ps health clean migrate migrate-down nats-init
 
 COMPOSE  = docker compose -f infra/docker-compose.yml --env-file infra/.env.docker
 DB_URL       = postgres://pkt:pkt_secret@localhost:5433/pkt_db?sslmode=disable
@@ -48,6 +48,14 @@ health:
 	@echo "=== NATS ===" && curl -s http://localhost:8222/healthz | grep -o '"status":"ok"' || echo "NATS: not ready"
 	@echo "=== Keycloak ===" && curl -sf http://localhost:8180/realms/master > /dev/null && echo "OK" || echo "NOT READY"
 	@echo "=== Directus ===" && curl -sf http://localhost:8055/server/health > /dev/null && echo "OK" || echo "NOT READY"
+
+# ─── NATS JetStream стримы ────────────────────────────────────────────────────
+
+nats-init:
+	docker run --rm --network infra_pkt-net \
+	  -v $(PWD)/infra/nats/streams-init.sh:/streams-init.sh:ro \
+	  --entrypoint /bin/sh \
+	  natsio/nats-box:latest /streams-init.sh
 
 # ─── Миграции (golang-migrate через Docker) ───────────────────────────────────
 # Порядок важен: core-api (users, geo, borrowers) → expertise → sync
