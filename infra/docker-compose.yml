@@ -1,0 +1,178 @@
+services:
+  # ─── PostgreSQL 16 + TimescaleDB + PostGIS ──────────────────────────────────
+  postgres:
+    image: timescale/timescaledb-ha:pg16
+    container_name: pkt-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-pkt}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-pkt_secret}
+      POSTGRES_DB: ${POSTGRES_DB:-pkt_db}
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres_data:/home/postgres/pgdata/data
+      - ./postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-pkt} -d ${POSTGRES_DB:-pkt_db}']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - pkt-net
+
+  # ─── Redis (Valkey) ──────────────────────────────────────────────────────────
+  valkey:
+    image: valkey/valkey:8-alpine
+    container_name: pkt-valkey
+    restart: unless-stopped
+    ports:
+      - '6379:6379'
+    volumes:
+      - valkey_data:/data
+    command: valkey-server --save 60 1 --loglevel warning
+    healthcheck:
+      test: ['CMD', 'valkey-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - pkt-net
+
+  # ─── MinIO ───────────────────────────────────────────────────────────────────
+  minio:
+    image: minio/minio:latest
+    container_name: pkt-minio
+    restart: unless-stopped
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin123}
+    ports:
+      - '9000:9000' # S3 API
+      - '9001:9001' # Web Console
+    volumes:
+      - minio_data:/data
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: ['CMD', 'mc', 'ready', 'local']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - pkt-net
+
+  # MinIO init — создаёт бакеты при первом запуске
+  minio-init:
+    image: minio/mc:latest
+    container_name: pkt-minio-init
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: /bin/sh /init/init.sh
+    volumes:
+      - ./minio/init.sh:/init/init.sh:ro
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin123}
+    networks:
+      - pkt-net
+    restart: 'no'
+
+  # ─── NATS JetStream ──────────────────────────────────────────────────────────
+  nats:
+    image: nats:2.10-alpine
+    container_name: pkt-nats
+    restart: unless-stopped
+    ports:
+      - '4222:4222' # Client
+      - '8222:8222' # HTTP Monitoring
+    volumes:
+      - ./nats/nats.conf:/etc/nats/nats.conf:ro
+      - nats_data:/data
+    command: ['-c', '/etc/nats/nats.conf']
+    healthcheck:
+      test: ['CMD', 'nats-server', '--help']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - pkt-net
+
+  # ─── Keycloak ────────────────────────────────────────────────────────────────
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.1
+    container_name: pkt-keycloak
+    restart: unless-stopped
+    environment:
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres:5432/keycloak_db
+      KC_DB_USERNAME: ${KEYCLOAK_DB_USER:-keycloak}
+      KC_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD:-keycloak_secret}
+      KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN:-admin}
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin123}
+      KC_HOSTNAME_STRICT: 'false'
+      KC_HTTP_ENABLED: 'true'
+    ports:
+      - '8180:8080'
+    volumes:
+      - ./keycloak/realm-pkt.json:/opt/keycloak/data/import/realm-pkt.json:ro
+    command: start-dev --import-realm
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          'CMD-SHELL',
+          "exec 3<>/dev/tcp/127.0.0.1/8080 && echo -e 'GET /health/ready HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n' >&3 && cat <&3 | grep -q '200 OK'",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
+    networks:
+      - pkt-net
+
+  # ─── Directus ────────────────────────────────────────────────────────────────
+  directus:
+    image: directus/directus:11
+    container_name: pkt-directus
+    restart: unless-stopped
+    environment:
+      SECRET: ${DIRECTUS_SECRET:-directus_super_secret_key_change_in_prod}
+      DB_CLIENT: pg
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_DATABASE: directus_db
+      DB_USER: ${DIRECTUS_DB_USER:-directus}
+      DB_PASSWORD: ${DIRECTUS_DB_PASSWORD:-directus_secret}
+      ADMIN_EMAIL: ${DIRECTUS_ADMIN_EMAIL:-admin@pkt.kz}
+      ADMIN_PASSWORD: ${DIRECTUS_ADMIN_PASSWORD:-admin123}
+      PUBLIC_URL: http://localhost:8055
+      CORS_ENABLED: 'true'
+      CORS_ORIGIN: 'http://localhost:3000'
+    ports:
+      - '8055:8055'
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD', 'wget', '--spider', '-q', 'http://localhost:8055/server/health']
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    networks:
+      - pkt-net
+
+# ─── Volumes ──────────────────────────────────────────────────────────────────
+volumes:
+  postgres_data:
+  valkey_data:
+  minio_data:
+  nats_data:
+
+# ─── Networks ─────────────────────────────────────────────────────────────────
+networks:
+  pkt-net:
+    driver: bridge

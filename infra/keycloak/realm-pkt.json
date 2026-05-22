@@ -1,0 +1,123 @@
+{
+  "realm": "pkt",
+  "displayName": "ТОО Первое кредитное товарищество",
+  "enabled": true,
+  "sslRequired": "none",
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": true,
+  "editUsernameAllowed": false,
+  "bruteForceProtected": true,
+  "defaultLocale": "ru",
+  "supportedLocales": ["ru", "kk", "en"],
+
+  "roles": {
+    "realm": [
+      { "name": "borrower", "description": "Заёмщик — личный кабинет" },
+      { "name": "employee", "description": "Сотрудник — аналитика, экспертиза, инлайн-редактор" },
+      { "name": "expert", "description": "Эксперт / КК — экспертиза залогов, голосование" },
+      { "name": "admin", "description": "Администратор — полный доступ" }
+    ]
+  },
+
+  "clients": [
+    {
+      "clientId": "web",
+      "name": "PKT Web",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "redirectUris": [
+        "http://localhost:3000/*",
+        "http://localhost:3000/api/auth/callback/keycloak"
+      ],
+      "webOrigins": ["http://localhost:3000"],
+      "attributes": {
+        "pkce.code.challenge.method": "S256"
+      }
+    },
+    {
+      "clientId": "mobile",
+      "name": "PKT Mobile",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "redirectUris": ["pkt://auth/*", "exp://localhost:8081/*"],
+      "webOrigins": ["*"],
+      "attributes": {
+        "pkce.code.challenge.method": "S256"
+      }
+    },
+    {
+      "clientId": "grafana",
+      "name": "Grafana",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "standardFlowEnabled": true,
+      "redirectUris": ["http://localhost:3001/*"],
+      "webOrigins": ["http://localhost:3001"]
+    },
+    {
+      "clientId": "directus",
+      "name": "Directus CMS",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "standardFlowEnabled": true,
+      "redirectUris": ["http://localhost:8055/*"],
+      "webOrigins": ["http://localhost:8055"]
+    }
+  ],
+
+  "users": [
+    {
+      "username": "borrower_test",
+      "email": "borrower@pkt.test",
+      "firstName": "Тестовый",
+      "lastName": "Заёмщик",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [{ "type": "password", "value": "Test1234!", "temporary": false }],
+      "realmRoles": ["borrower"]
+    },
+    {
+      "username": "employee_test",
+      "email": "employee@pkt.test",
+      "firstName": "Тестовый",
+      "lastName": "Сотрудник",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [{ "type": "password", "value": "Test1234!", "temporary": false }],
+      "realmRoles": ["employee"]
+    },
+    {
+      "username": "expert_test",
+      "email": "expert@pkt.test",
+      "firstName": "Тестовый",
+      "lastName": "Эксперт",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [{ "type": "password", "value": "Test1234!", "temporary": false }],
+      "realmRoles": ["expert"]
+    },
+    {
+      "username": "admin_test",
+      "email": "admin@pkt.test",
+      "firstName": "Тестовый",
+      "lastName": "Администратор",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [{ "type": "password", "value": "Test1234!", "temporary": false }],
+      "realmRoles": ["admin"]
+    }
+  ]
+}
