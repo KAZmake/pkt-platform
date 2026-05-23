@@ -15,7 +15,8 @@ import (
 	dbutil "github.com/KAZmake/pkt-platform/apps/api/core-api/internal/db"
 	"github.com/KAZmake/pkt-platform/apps/api/core-api/internal/handler"
 	apimw "github.com/KAZmake/pkt-platform/apps/api/core-api/internal/middleware"
-	"github.com/KAZmake/pkt-platform/apps/api/core-api/pkg/response"
+	"github.com/KAZmake/pkt-platform/apps/api/core-api/internal/repository"
+	"github.com/KAZmake/pkt-platform/apps/api/core-api/internal/service"
 	"github.com/MicahParks/keyfunc/v3"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -63,6 +64,14 @@ func main() {
 	}
 	slog.Info("JWKS loaded", "url", jwksURL)
 
+	// ── Dependencies ─────────────────────────────────────────────────────────
+	userRepo := repository.NewUserRepository(db)
+	borrowerRepo := repository.NewBorrowerRepository(db)
+	userSvc := service.NewUserService(userRepo, borrowerRepo)
+
+	healthHandler := handler.NewHealthHandler(db)
+	userHandler := handler.NewUserHandler(userSvc)
+
 	// ── Router ────────────────────────────────────────────────────────────────
 	r := chi.NewRouter()
 
@@ -73,31 +82,31 @@ func main() {
 	r.Use(middleware.Compress(5))
 	r.Use(apimw.CORS([]string{"http://localhost:3000", "http://localhost:8055"}))
 
-	healthHandler := handler.NewHealthHandler(db)
-
 	r.Route("/api/v1", func(r chi.Router) {
-		// Public
+		// ── Public ────────────────────────────────────────────────────────────
 		r.Get("/health", healthHandler.Check)
 
-		// Authenticated routes
+		// ── Authenticated ─────────────────────────────────────────────────────
 		r.Group(func(r chi.Router) {
 			r.Use(apimw.Authenticate(jwks))
+			r.Use(handler.SyncUser(userSvc))
 
-			r.Get("/me", func(w http.ResponseWriter, req *http.Request) {
-				claims, _ := apimw.ClaimsFromCtx(req.Context())
-				response.OK(w, map[string]any{
-					"email":    claims.Email,
-					"username": claims.PreferredUsername,
-					"roles":    claims.RealmAccess.Roles,
-				})
+			// Current user profile
+			r.Get("/me", userHandler.GetMe)
+			r.Put("/me", userHandler.UpdateMe)
+
+			// Borrower profile (borrower role only)
+			r.Group(func(r chi.Router) {
+				r.Use(apimw.RequireRole("borrower", "admin"))
+				r.Get("/me/borrower", userHandler.GetMyBorrower)
+				r.Put("/me/borrower", userHandler.UpdateMyBorrower)
 			})
 
-			// Employee+ only example
+			// Employee+ endpoints
 			r.Group(func(r chi.Router) {
 				r.Use(apimw.RequireRole("employee", "expert", "admin"))
-				r.Get("/admin/ping", func(w http.ResponseWriter, _ *http.Request) {
-					response.OK(w, map[string]string{"message": "access granted"})
-				})
+				r.Get("/users", userHandler.ListUsers)
+				r.Get("/users/{id}", userHandler.GetUser)
 			})
 		})
 	})
