@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/KAZmake/pkt-platform/apps/api/core-api/internal/config"
+	dbutil "github.com/KAZmake/pkt-platform/apps/api/core-api/internal/db"
 	"github.com/KAZmake/pkt-platform/apps/api/core-api/internal/handler"
 	apimw "github.com/KAZmake/pkt-platform/apps/api/core-api/internal/middleware"
 	"github.com/KAZmake/pkt-platform/apps/api/core-api/pkg/response"
@@ -44,6 +45,12 @@ func main() {
 		os.Exit(1)
 	}
 	slog.Info("database connected", "url", maskDSN(cfg.DatabaseURL))
+
+	// ── Migrations ───────────────────────────────────────────────────────────
+	if err := dbutil.RunMigrations(cfg.DatabaseURL, cfg.MigrationsDir, "schema_migrations_core"); err != nil {
+		slog.Error("migrations failed", "error", err)
+		os.Exit(1)
+	}
 
 	// ── JWKS (Keycloak) ───────────────────────────────────────────────────────
 	jwksURL := fmt.Sprintf("%s/realms/%s/protocol/openid-connect/certs",
