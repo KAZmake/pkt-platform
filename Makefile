@@ -1,4 +1,4 @@
-.PHONY: up down restart logs ps health clean migrate migrate-down nats-init
+.PHONY: up down restart logs ps health clean migrate migrate-down nats-init directus-init
 
 COMPOSE  = docker compose -f infra/docker-compose.yml --env-file infra/.env.docker
 DB_URL       = postgres://pkt:pkt_secret@localhost:5433/pkt_db?sslmode=disable
@@ -56,6 +56,14 @@ nats-init:
 	  -v $(PWD)/infra/nats/streams-init.sh:/streams-init.sh:ro \
 	  --entrypoint /bin/sh \
 	  natsio/nats-box:latest /streams-init.sh
+
+# ─── Directus коллекции ───────────────────────────────────────────────────────
+
+directus-init:
+	DIRECTUS_URL=http://localhost:8055 \
+	DIRECTUS_ADMIN_EMAIL=$${DIRECTUS_ADMIN_EMAIL:-admin@pkt.kz} \
+	DIRECTUS_ADMIN_PASSWORD=$${DIRECTUS_ADMIN_PASSWORD:-admin123} \
+	python3 infra/directus/collections-init.py
 
 # ─── Миграции (golang-migrate через Docker) ───────────────────────────────────
 # Порядок важен: core-api (users, geo, borrowers) → expertise → sync

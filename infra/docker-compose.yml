@@ -151,6 +151,14 @@ services:
       PUBLIC_URL: http://localhost:8055
       CORS_ENABLED: 'true'
       CORS_ORIGIN: 'http://localhost:3000'
+      # OIDC через Keycloak (сотрудники входят через SSO)
+      AUTH_KEYCLOAK_DRIVER: openid
+      AUTH_KEYCLOAK_CLIENT_ID: directus
+      AUTH_KEYCLOAK_CLIENT_SECRET: ${DIRECTUS_KEYCLOAK_SECRET:-}
+      AUTH_KEYCLOAK_ISSUER_URL: http://keycloak:8080/realms/pkt
+      AUTH_KEYCLOAK_IDENTIFIER_KEY: email
+      AUTH_KEYCLOAK_ALLOW_PUBLIC_REGISTRATION: 'false'
+      AUTH_KEYCLOAK_DEFAULT_ROLE_ID: ${DIRECTUS_DEFAULT_ROLE_ID:-}
     ports:
       - '8055:8055'
     depends_on:
