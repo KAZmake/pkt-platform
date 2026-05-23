@@ -17,6 +17,9 @@ type Config struct {
 	MinioAccessKey string
 	MinioSecretKey string
 	MinioUseSSL    bool
+	ResendAPIKey   string
+	EmailFrom      string
+	CabinetURL     string
 	Environment    string
 }
 
@@ -33,6 +36,9 @@ func Load() *Config {
 		MinioAccessKey: getEnv("MINIO_ACCESS_KEY", "minioadmin"),
 		MinioSecretKey: getEnv("MINIO_SECRET_KEY", "minioadmin123"),
 		MinioUseSSL:    strings.ToLower(getEnv("MINIO_USE_SSL", "false")) == "true",
+		ResendAPIKey:   getEnv("RESEND_API_KEY", ""),
+		EmailFrom:      getEnv("EMAIL_FROM", "no-reply@pkt.kz"),
+		CabinetURL:     getEnv("CABINET_URL", "http://localhost:3000/cabinet"),
 		Environment:    getEnv("ENVIRONMENT", "development"),
 	}
 }

@@ -56,6 +56,7 @@ func (s *ApplicationService) Create(ctx context.Context, borrowerID uuid.UUID, i
 		"borrower_id":    app.BorrowerID,
 		"program_id":     app.ProgramID,
 		"amount":         app.Amount,
+		"term_months":    app.TermMonths,
 		"created_at":     app.CreatedAt,
 	})
 

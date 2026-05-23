@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/KAZmake/pkt-platform/apps/api/core-api/internal/config"
+	"github.com/KAZmake/pkt-platform/apps/api/core-api/internal/consumer"
 	dbutil "github.com/KAZmake/pkt-platform/apps/api/core-api/internal/db"
 	"github.com/KAZmake/pkt-platform/apps/api/core-api/internal/handler"
 	apimw "github.com/KAZmake/pkt-platform/apps/api/core-api/internal/middleware"
@@ -102,6 +103,7 @@ func main() {
 	appRepo := repository.NewApplicationRepository(db)
 	docRepo := repository.NewDocumentRepository(db)
 	ticketRepo := repository.NewTicketRepository(db)
+	notifRepo := repository.NewNotificationRepository(db)
 
 	userSvc := service.NewUserService(userRepo, borrowerRepo)
 	programSvc := service.NewProgramService(programRepo)
@@ -109,6 +111,8 @@ func main() {
 	docSvc := service.NewDocumentService(docRepo, mc)
 	scheduleSvc := service.NewScheduleService(appRepo, programRepo)
 	ticketSvc := service.NewTicketService(ticketRepo)
+	notifSvc := service.NewNotificationService(notifRepo)
+	mailer := service.NewMailer(cfg.ResendAPIKey, cfg.EmailFrom)
 
 	healthHandler := handler.NewHealthHandler(db)
 	userHandler := handler.NewUserHandler(userSvc)
@@ -116,6 +120,15 @@ func main() {
 	appHandler := handler.NewApplicationHandler(appSvc)
 	docHandler := handler.NewDocumentHandler(docSvc, scheduleSvc)
 	ticketHandler := handler.NewTicketHandler(ticketSvc)
+	notifHandler := handler.NewNotificationHandler(notifSvc)
+
+	// ── NATS consumer ─────────────────────────────────────────────────────────
+	if js != nil {
+		notifConsumer := consumer.NewNotificationConsumer(
+			js, notifSvc, mailer, userRepo, borrowerRepo, cfg.CabinetURL,
+		)
+		notifConsumer.Start(context.Background())
+	}
 
 	// ── Router ────────────────────────────────────────────────────────────────
 	r := chi.NewRouter()
@@ -198,6 +211,12 @@ func main() {
 				r.Use(apimw.RequireRole("employee", "expert", "admin"))
 				r.Patch("/tickets/{id}/status", ticketHandler.ChangeTicketStatus)
 			})
+
+			// Notifications
+			r.Get("/notifications", notifHandler.ListNotifications)
+			r.Get("/notifications/unread-count", notifHandler.UnreadCount)
+			r.Patch("/notifications/read-all", notifHandler.MarkAllRead)
+			r.Patch("/notifications/{id}/read", notifHandler.MarkRead)
 		})
 	})
 
