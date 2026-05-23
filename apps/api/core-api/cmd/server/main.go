@@ -67,10 +67,14 @@ func main() {
 	// ── Dependencies ─────────────────────────────────────────────────────────
 	userRepo := repository.NewUserRepository(db)
 	borrowerRepo := repository.NewBorrowerRepository(db)
+	programRepo := repository.NewProgramRepository(db)
+
 	userSvc := service.NewUserService(userRepo, borrowerRepo)
+	programSvc := service.NewProgramService(programRepo)
 
 	healthHandler := handler.NewHealthHandler(db)
 	userHandler := handler.NewUserHandler(userSvc)
+	programHandler := handler.NewProgramHandler(programSvc)
 
 	// ── Router ────────────────────────────────────────────────────────────────
 	r := chi.NewRouter()
@@ -85,6 +89,8 @@ func main() {
 	r.Route("/api/v1", func(r chi.Router) {
 		// ── Public ────────────────────────────────────────────────────────────
 		r.Get("/health", healthHandler.Check)
+		r.Get("/programs", programHandler.ListPrograms)
+		r.Get("/programs/{id}", programHandler.GetProgram)
 
 		// ── Authenticated ─────────────────────────────────────────────────────
 		r.Group(func(r chi.Router) {
@@ -107,6 +113,14 @@ func main() {
 				r.Use(apimw.RequireRole("employee", "expert", "admin"))
 				r.Get("/users", userHandler.ListUsers)
 				r.Get("/users/{id}", userHandler.GetUser)
+			})
+
+			// Admin-only program management
+			r.Group(func(r chi.Router) {
+				r.Use(apimw.RequireRole("admin"))
+				r.Post("/programs", programHandler.CreateProgram)
+				r.Put("/programs/{id}", programHandler.UpdateProgram)
+				r.Delete("/programs/{id}", programHandler.DeactivateProgram)
 			})
 		})
 	})
