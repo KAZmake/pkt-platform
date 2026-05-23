@@ -1,1 +1,6 @@
+# Add Go toolchain to PATH if installed
+for d in "$HOME/sdk/go1.25.0/bin" "$HOME/go/bin" "/usr/local/go/bin" "/tmp/goroot/go/bin"; do
+  [ -x "$d/gofmt" ] && export PATH="$d:$PATH" && break
+done
+
 pnpm lint-staged
