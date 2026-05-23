@@ -1,0 +1,32 @@
+package config
+
+import "os"
+
+type Config struct {
+	Port          string
+	DatabaseURL   string
+	MigrationsDir string
+	KeycloakURL   string
+	KeycloakRealm string
+	NatsURL       string
+	Environment   string
+}
+
+func Load() *Config {
+	return &Config{
+		Port:          getEnv("PORT", "8081"),
+		DatabaseURL:   getEnv("DATABASE_URL", "postgres://pkt:pkt_secret@localhost:5433/pkt_db?sslmode=disable"),
+		MigrationsDir: getEnv("MIGRATIONS_DIR", "migrations"),
+		KeycloakURL:   getEnv("KEYCLOAK_URL", "http://localhost:8080"),
+		KeycloakRealm: getEnv("KEYCLOAK_REALM", "pkt"),
+		NatsURL:       getEnv("NATS_URL", "nats://localhost:4222"),
+		Environment:   getEnv("ENVIRONMENT", "development"),
+	}
+}
+
+func getEnv(key, defaultVal string) string {
+	if v := os.Getenv(key); v != "" {
+		return v
+	}
+	return defaultVal
+}
