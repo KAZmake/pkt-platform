@@ -21,6 +21,8 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/minio/minio-go/v7"
+	"github.com/minio/minio-go/v7/pkg/credentials"
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
 )
@@ -66,6 +68,17 @@ func main() {
 	}
 	slog.Info("JWKS loaded", "url", jwksURL)
 
+	// ── MinIO ─────────────────────────────────────────────────────────────────
+	mc, err := minio.New(cfg.MinioEndpoint, &minio.Options{
+		Creds:  credentials.NewStaticV4(cfg.MinioAccessKey, cfg.MinioSecretKey, ""),
+		Secure: cfg.MinioUseSSL,
+	})
+	if err != nil {
+		slog.Error("failed to init MinIO client", "error", err)
+		os.Exit(1)
+	}
+	slog.Info("MinIO client ready", "endpoint", cfg.MinioEndpoint)
+
 	// ── NATS JetStream (optional — non-fatal if unavailable) ──────────────────
 	var js jetstream.JetStream
 	nc, err := nats.Connect(cfg.NatsURL)
@@ -87,15 +100,22 @@ func main() {
 	borrowerRepo := repository.NewBorrowerRepository(db)
 	programRepo := repository.NewProgramRepository(db)
 	appRepo := repository.NewApplicationRepository(db)
+	docRepo := repository.NewDocumentRepository(db)
+	ticketRepo := repository.NewTicketRepository(db)
 
 	userSvc := service.NewUserService(userRepo, borrowerRepo)
 	programSvc := service.NewProgramService(programRepo)
 	appSvc := service.NewApplicationService(appRepo, js)
+	docSvc := service.NewDocumentService(docRepo, mc)
+	scheduleSvc := service.NewScheduleService(appRepo, programRepo)
+	ticketSvc := service.NewTicketService(ticketRepo)
 
 	healthHandler := handler.NewHealthHandler(db)
 	userHandler := handler.NewUserHandler(userSvc)
 	programHandler := handler.NewProgramHandler(programSvc)
 	appHandler := handler.NewApplicationHandler(appSvc)
+	docHandler := handler.NewDocumentHandler(docSvc, scheduleSvc)
+	ticketHandler := handler.NewTicketHandler(ticketSvc)
 
 	// ── Router ────────────────────────────────────────────────────────────────
 	r := chi.NewRouter()
@@ -147,13 +167,36 @@ func main() {
 			// Applications
 			r.Get("/applications", appHandler.ListApplications)
 			r.Get("/applications/{id}", appHandler.GetApplication)
+			r.Get("/applications/{id}/schedule", docHandler.GetSchedule)
+			r.Get("/applications/{id}/documents", docHandler.ListApplicationDocuments)
 			r.Group(func(r chi.Router) {
 				r.Use(apimw.RequireRole("borrower"))
 				r.Post("/applications", appHandler.CreateApplication)
+				r.Post("/applications/{id}/documents/upload-url", docHandler.InitiateUpload)
 			})
 			r.Group(func(r chi.Router) {
 				r.Use(apimw.RequireRole("employee", "expert", "admin"))
 				r.Patch("/applications/{id}/status", appHandler.ChangeStatus)
+			})
+
+			// Documents
+			r.Get("/documents/{id}/download-url", docHandler.GetDownloadURL)
+			r.Group(func(r chi.Router) {
+				r.Use(apimw.RequireRole("borrower", "admin"))
+				r.Delete("/documents/{id}", docHandler.DeleteDocument)
+			})
+
+			// Tickets (обращения)
+			r.Get("/tickets", ticketHandler.ListTickets)
+			r.Get("/tickets/{id}", ticketHandler.GetTicket)
+			r.Post("/tickets/{id}/messages", ticketHandler.AddMessage)
+			r.Group(func(r chi.Router) {
+				r.Use(apimw.RequireRole("borrower"))
+				r.Post("/tickets", ticketHandler.CreateTicket)
+			})
+			r.Group(func(r chi.Router) {
+				r.Use(apimw.RequireRole("employee", "expert", "admin"))
+				r.Patch("/tickets/{id}/status", ticketHandler.ChangeTicketStatus)
 			})
 		})
 	})
