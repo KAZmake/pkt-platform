@@ -1,4 +1,4 @@
-.PHONY: up down restart logs ps health clean migrate migrate-down nats-init directus-init
+.PHONY: up down restart logs ps health clean migrate migrate-down nats-init directus-init seed
 
 COMPOSE  = docker compose -f infra/docker-compose.yml --env-file infra/.env.docker
 DB_URL       = postgres://pkt:pkt_secret@localhost:5433/pkt_db?sslmode=disable
@@ -64,6 +64,15 @@ directus-init:
 	DIRECTUS_ADMIN_EMAIL=$${DIRECTUS_ADMIN_EMAIL:-admin@pkt.kz} \
 	DIRECTUS_ADMIN_PASSWORD=$${DIRECTUS_ADMIN_PASSWORD:-admin123} \
 	python3 infra/directus/collections-init.py
+
+# ─── Seed-данные ──────────────────────────────────────────────────────────────
+
+seed:
+	@for f in infra/postgres/seed/*.sql; do \
+	  echo "=== $$f ===" && \
+	  docker exec -i pkt-postgres psql -U pkt -d pkt_db < $$f; \
+	done
+	@echo "Seed complete."
 
 # ─── Миграции (golang-migrate через Docker) ───────────────────────────────────
 # Порядок важен: core-api (users, geo, borrowers) → expertise → sync
