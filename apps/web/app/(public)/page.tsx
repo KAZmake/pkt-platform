@@ -1,16 +1,27 @@
 import type { Metadata } from 'next';
+import { Hero } from '@/components/home/hero';
+import { KpiSection } from '@/components/home/kpi-counter';
+import { ZkoMapPreview } from '@/components/home/zko-map';
+import { ProgramsTeaser } from '@/components/home/programs-teaser';
+import { NewsTeaser } from '@/components/home/news-teaser';
+import { getPrograms } from '@/lib/api/programs';
+import { getNews } from '@/lib/directus';
 
-export const metadata: Metadata = {
-  title: 'Главная',
-};
+export const metadata: Metadata = { title: 'Главная' };
 
-export default function HomePage() {
+export default async function HomePage() {
+  const [programs, news] = await Promise.all([
+    getPrograms().catch(() => []),
+    getNews(3).catch(() => []),
+  ]);
+
   return (
-    <div className="container-page py-16 text-center">
-      <h1 className="text-3xl font-bold text-brand-green mb-4">Первое кредитное товарищество</h1>
-      <p className="text-gray-600 max-w-xl mx-auto">
-        Кредитование агросектора Западно-Казахстанской области.
-      </p>
-    </div>
+    <>
+      <Hero />
+      <KpiSection />
+      <ProgramsTeaser programs={programs} />
+      <ZkoMapPreview />
+      <NewsTeaser news={news} />
+    </>
   );
 }
