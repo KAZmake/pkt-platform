@@ -30,7 +30,8 @@ services:
       - '6380:6379'
     volumes:
       - valkey_data:/data
-    command: valkey-server --save 60 1 --loglevel warning
+      - ./valkey/valkey.conf:/etc/valkey/valkey.conf:ro
+    command: valkey-server /etc/valkey/valkey.conf
     healthcheck:
       test: ['CMD', 'valkey-cli', 'ping']
       interval: 10s
