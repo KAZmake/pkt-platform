@@ -6,6 +6,15 @@ import (
 	"github.com/google/uuid"
 )
 
+// Role constants
+const (
+	RoleAdmin    = "admin"
+	RoleExpert   = "expert"
+	RoleEmployee = "employee"
+	RoleBorrower = "borrower"
+	RolePublic   = "public"
+)
+
 type User struct {
 	ID         uuid.UUID
 	KeycloakID string

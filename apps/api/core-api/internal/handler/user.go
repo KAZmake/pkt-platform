@@ -3,6 +3,7 @@ package handler
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -18,11 +19,22 @@ import (
 
 type ctxKey string
 
-const syncedUserKey ctxKey = "synced_user"
+const (
+	syncedUserKey     ctxKey = "synced_user"
+	syncedBorrowerKey ctxKey = "synced_borrower"
+)
 
 func userFromCtx(ctx context.Context) (*model.User, bool) {
 	u, ok := ctx.Value(syncedUserKey).(*model.User)
 	return u, ok && u != nil
+}
+
+func borrowerIDFromCtx(ctx context.Context) (uuid.UUID, error) {
+	b, ok := ctx.Value(syncedBorrowerKey).(*model.Borrower)
+	if !ok || b == nil {
+		return uuid.Nil, fmt.Errorf("no borrower in context")
+	}
+	return b.ID, nil
 }
 
 // ── SyncUser middleware ───────────────────────────────────────────────────────
@@ -45,6 +57,15 @@ func SyncUser(svc *service.UserService) func(http.Handler) http.Handler {
 			}
 
 			ctx := context.WithValue(r.Context(), syncedUserKey, u)
+
+			// For borrowers, eagerly load borrower profile into context.
+			if u.Role == model.RoleBorrower {
+				b, err := svc.GetBorrowerProfile(r.Context(), u.ID)
+				if err == nil && b != nil {
+					ctx = context.WithValue(ctx, syncedBorrowerKey, b)
+				}
+			}
+
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}

@@ -9,6 +9,7 @@ type Config struct {
 	KeycloakURL   string
 	KeycloakRealm string
 	ValkeyURL     string
+	NatsURL       string
 	Environment   string
 }
 
@@ -20,6 +21,7 @@ func Load() *Config {
 		KeycloakURL:   getEnv("KEYCLOAK_URL", "http://localhost:8080"),
 		KeycloakRealm: getEnv("KEYCLOAK_REALM", "pkt"),
 		ValkeyURL:     getEnv("VALKEY_URL", "redis://localhost:6380/0"),
+		NatsURL:       getEnv("NATS_URL", "nats://localhost:4222"),
 		Environment:   getEnv("ENVIRONMENT", "development"),
 	}
 }

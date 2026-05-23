@@ -21,6 +21,8 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/nats-io/nats.go"
+	"github.com/nats-io/nats.go/jetstream"
 )
 
 func main() {
@@ -64,17 +66,36 @@ func main() {
 	}
 	slog.Info("JWKS loaded", "url", jwksURL)
 
+	// ── NATS JetStream (optional — non-fatal if unavailable) ──────────────────
+	var js jetstream.JetStream
+	nc, err := nats.Connect(cfg.NatsURL)
+	if err != nil {
+		slog.Warn("NATS unavailable — events disabled", "url", cfg.NatsURL, "error", err)
+	} else {
+		defer nc.Drain()
+		js, err = jetstream.New(nc)
+		if err != nil {
+			slog.Warn("JetStream init failed — events disabled", "error", err)
+			js = nil
+		} else {
+			slog.Info("NATS JetStream connected", "url", cfg.NatsURL)
+		}
+	}
+
 	// ── Dependencies ─────────────────────────────────────────────────────────
 	userRepo := repository.NewUserRepository(db)
 	borrowerRepo := repository.NewBorrowerRepository(db)
 	programRepo := repository.NewProgramRepository(db)
+	appRepo := repository.NewApplicationRepository(db)
 
 	userSvc := service.NewUserService(userRepo, borrowerRepo)
 	programSvc := service.NewProgramService(programRepo)
+	appSvc := service.NewApplicationService(appRepo, js)
 
 	healthHandler := handler.NewHealthHandler(db)
 	userHandler := handler.NewUserHandler(userSvc)
 	programHandler := handler.NewProgramHandler(programSvc)
+	appHandler := handler.NewApplicationHandler(appSvc)
 
 	// ── Router ────────────────────────────────────────────────────────────────
 	r := chi.NewRouter()
@@ -121,6 +142,18 @@ func main() {
 				r.Post("/programs", programHandler.CreateProgram)
 				r.Put("/programs/{id}", programHandler.UpdateProgram)
 				r.Delete("/programs/{id}", programHandler.DeactivateProgram)
+			})
+
+			// Applications
+			r.Get("/applications", appHandler.ListApplications)
+			r.Get("/applications/{id}", appHandler.GetApplication)
+			r.Group(func(r chi.Router) {
+				r.Use(apimw.RequireRole("borrower"))
+				r.Post("/applications", appHandler.CreateApplication)
+			})
+			r.Group(func(r chi.Router) {
+				r.Use(apimw.RequireRole("employee", "expert", "admin"))
+				r.Patch("/applications/{id}/status", appHandler.ChangeStatus)
 			})
 		})
 	})
