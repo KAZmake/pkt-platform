@@ -15,7 +15,7 @@ interface ScheduleRow {
   balance: number;
 }
 
-function calcAnnuity(amount: number, termMonths: number, annualRate: number): ScheduleRow[] {
+export function calcAnnuity(amount: number, termMonths: number, annualRate: number): ScheduleRow[] {
   const r = annualRate / 100 / 12;
   if (r === 0) {
     const p = amount / termMonths;
@@ -39,7 +39,11 @@ function calcAnnuity(amount: number, termMonths: number, annualRate: number): Sc
   return rows;
 }
 
-function calcDifferentiated(amount: number, termMonths: number, annualRate: number): ScheduleRow[] {
+export function calcDifferentiated(
+  amount: number,
+  termMonths: number,
+  annualRate: number,
+): ScheduleRow[] {
   const r = annualRate / 100 / 12;
   const principalPayment = amount / termMonths;
   const rows: ScheduleRow[] = [];
