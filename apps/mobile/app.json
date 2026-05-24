@@ -1,0 +1,40 @@
+{
+  "expo": {
+    "name": "ПКТ",
+    "slug": "pkt-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "pkt",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "kz.pkt.mobile",
+      "buildNumber": "1"
+    },
+    "android": {
+      "package": "kz.pkt.mobile",
+      "versionCode": 1,
+      "adaptiveIcon": {
+        "backgroundColor": "#1a5c36"
+      }
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "static"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      [
+        "expo-notifications",
+        {
+          "color": "#1a5c36"
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
