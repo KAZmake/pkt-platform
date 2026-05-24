@@ -1,0 +1,60 @@
+# ─── pg_dump → B2 CronJob ─────────────────────────────────────────────────────
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: pg-backup
+  namespace: staging
+spec:
+  schedule: '0 3 * * *' # 03:00 UTC daily
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: pg-backup
+              image: ghcr.io/kazmaker/pkt-platform/pg-backup:latest
+              command: [backup]
+              env:
+                - name: PGHOST
+                  value: postgres
+                - name: PGPORT
+                  value: '5432'
+                - name: PGUSER
+                  valueFrom:
+                    secretKeyRef:
+                      name: pkt-staging-secrets
+                      key: POSTGRES_USER
+                - name: PGPASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: pkt-staging-secrets
+                      key: POSTGRES_PASSWORD
+                - name: B2_BUCKET
+                  valueFrom:
+                    secretKeyRef:
+                      name: pkt-backup-secrets
+                      key: B2_BUCKET
+                - name: B2_ACCOUNT_ID
+                  valueFrom:
+                    secretKeyRef:
+                      name: pkt-backup-secrets
+                      key: B2_ACCOUNT_ID
+                - name: B2_APPLICATION_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      name: pkt-backup-secrets
+                      key: B2_APPLICATION_KEY
+                - name: RETENTION_DAYS
+                  value: '30'
+              resources:
+                requests:
+                  memory: 128Mi
+                  cpu: 100m
+                limits:
+                  memory: 512Mi
+                  cpu: 500m

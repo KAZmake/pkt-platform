@@ -10,6 +10,7 @@ resources:
   - infra.yaml
   - services.yaml
   - ingress.yaml
+  - backup.yaml
 
 # secrets.yaml создаётся вручную — не включать в kustomization
 # kubectl apply -f k8s/staging/secrets.yaml  (только локально, не в git!)
@@ -24,4 +25,6 @@ images:
   - name: ghcr.io/kazmaker/pkt-platform/assistant-svc
     newTag: latest
   - name: ghcr.io/kazmaker/pkt-platform/web
+    newTag: latest
+  - name: ghcr.io/kazmaker/pkt-platform/pg-backup
     newTag: latest
