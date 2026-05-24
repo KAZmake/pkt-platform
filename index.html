@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ТОО «Первое кредитное товарищество» — Roadmap</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --blue: #1B4F8A;
+    --blue-light: #D6E4F5;
+    --dark: #1A1A2E;
+    --gray: #F4F6FA;
+    --border: #E2EAF4;
+    --text-secondary: #6B7A99;
+    --green: #166534;
+    --green-bg: #DCFCE7;
+    --amber: #92400E;
+    --amber-bg: #FEF3C7;
+    --radius: 12px;
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: #EEF2F9;
+    color: var(--dark);
+    min-height: 100vh;
+  }
+
+  /* ── HEADER ── */
+  .site-header {
+    background: var(--blue);
+    padding: 24px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+  .site-title { color: #fff; font-size: 20px; font-weight: 700; }
+  .site-sub   { color: rgba(255,255,255,0.7); font-size: 13px; margin-top: 2px; }
+  .updated    { color: rgba(255,255,255,0.6); font-size: 12px; }
+
+  /* ── OVERALL PROGRESS ── */
+  .overall {
+    background: #fff;
+    border-bottom: 1px solid var(--border);
+    padding: 20px 32px;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 24px;
+    align-items: center;
+  }
+  .overall-bar-wrap { width: 100%; }
+  .overall-label { font-size: 13px; color: var(--text-secondary); margin-bottom: 8px; }
+  .overall-bar {
+    height: 12px; border-radius: 99px;
+    background: var(--blue-light); overflow: hidden;
+  }
+  .overall-fill {
+    height: 100%; border-radius: 99px;
+    background: var(--blue);
+    transition: width 0.6s ease;
+  }
+  .overall-pct {
+    font-size: 48px; font-weight: 800; color: var(--blue);
+    line-height: 1; white-space: nowrap;
+  }
+  .overall-sub { font-size: 13px; color: var(--text-secondary); text-align: right; }
+
+  /* ── STATUS CARDS ── */
+  .status-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 10px;
+    padding: 16px 32px;
+    background: var(--gray);
+    border-bottom: 1px solid var(--border);
+  }
+  .status-card {
+    background: #fff;
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    border: 1px solid var(--border);
+  }
+  .status-card-label {
+    font-size: 11px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: .06em; color: var(--text-secondary); margin-bottom: 6px;
+  }
+  .status-card-value { font-size: 14px; font-weight: 500; color: var(--dark); line-height: 1.4; }
+  .status-card.highlight { border-color: var(--blue); background: var(--blue-light); }
+  .status-card.highlight .status-card-value { color: var(--blue); font-weight: 700; }
+
+  /* ── PHASES GRID ── */
+  .phases-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 360px), 1fr));
+    gap: 16px;
+    padding: 20px 32px;
+    max-width: 1600px;
+    margin: 0 auto;
+  }
+
+  /* ── PHASE CARD ── */
+  .phase-card {
+    background: #fff;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    overflow: hidden;
+    border-top: 4px solid var(--phase-color);
+  }
+  .phase-header {
+    padding: 16px 18px 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  .phase-meta { display: flex; gap: 12px; align-items: flex-start; }
+  .phase-id {
+    font-size: 11px; font-weight: 700; padding: 3px 8px;
+    border-radius: 6px; white-space: nowrap;
+    background: var(--phase-bg); color: var(--phase-color);
+  }
+  .phase-title { font-size: 15px; font-weight: 700; color: var(--dark); line-height: 1.3; }
+  .phase-duration { font-size: 12px; color: var(--text-secondary); margin-top: 3px; }
+  .phase-right { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex-shrink: 0; }
+  .phase-pct { font-size: 22px; font-weight: 800; color: var(--phase-color); }
+
+  /* badges */
+  .badge {
+    font-size: 10px; font-weight: 700; padding: 2px 8px;
+    border-radius: 99px; text-transform: uppercase; letter-spacing: .04em;
+  }
+  .badge-done   { background: var(--green-bg); color: var(--green); }
+  .badge-active { background: var(--blue-light); color: var(--blue); }
+  .badge-todo   { background: #F1F5F9; color: #64748B; }
+
+  /* progress bar */
+  .phase-progress-bar {
+    height: 5px; background: var(--phase-bg);
+    margin: 0 18px 0;
+  }
+  .phase-progress-fill {
+    height: 100%; background: var(--phase-color);
+    transition: width .5s ease;
+  }
+
+  /* body */
+  .phase-body {
+    padding: 14px 18px;
+    max-height: 380px;
+    overflow-y: auto;
+  }
+  .phase-body::-webkit-scrollbar { width: 4px; }
+  .phase-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  /* subphase */
+  .subphase { margin-bottom: 12px; }
+  .subphase-header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 6px; padding-bottom: 4px;
+    border-bottom: 1px solid var(--border);
+  }
+  .subphase-title { font-size: 12px; font-weight: 700; color: var(--blue); text-transform: uppercase; letter-spacing: .04em; }
+  .subphase-count { font-size: 11px; color: var(--text-secondary); }
+
+  /* task */
+  .task {
+    display: flex; align-items: flex-start; gap: 8px;
+    padding: 4px 0; font-size: 13px; color: var(--dark); line-height: 1.4;
+  }
+  .task-done { color: var(--text-secondary); }
+  .task-done span:last-child { text-decoration: line-through; }
+  .task-icon { font-size: 12px; flex-shrink: 0; margin-top: 1px; }
+  .task-icon.done { color: var(--green); }
+  .task-icon.todo { color: #CBD5E1; }
+
+  /* footer */
+  .phase-footer {
+    padding: 8px 18px 12px;
+    font-size: 11px; color: var(--text-secondary);
+    border-top: 1px solid var(--border); margin-top: 4px;
+  }
+
+  /* ── RESPONSIVE ── */
+
+  /* Планшет */
+  @media (max-width: 768px) {
+    .site-header { padding: 16px 20px; gap: 10px; }
+    .site-title  { font-size: 17px; }
+    .overall     { padding: 20px; gap: 16px; }
+    .status-row  { padding: 12px 20px; gap: 8px;
+                   grid-template-columns: repeat(2, 1fr); }
+    .phases-grid { padding: 16px 20px; gap: 12px; }
+  }
+
+  /* Мобильный */
+  @media (max-width: 480px) {
+    .site-header { padding: 12px 16px; }
+    .site-title  { font-size: 15px; }
+    .site-sub    { font-size: 11px; }
+    .updated     { font-size: 11px; }
+
+    .overall {
+      padding: 14px 16px;
+      grid-template-columns: 1fr auto;
+      gap: 12px;
+    }
+    .overall-label { font-size: 12px; }
+    .overall-pct   { font-size: 28px; }
+    .overall-sub   { font-size: 11px; }
+
+    .status-row {
+      padding: 10px 16px;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+    .status-card       { padding: 10px 12px; }
+    .status-card-label { font-size: 10px; }
+    .status-card-value { font-size: 13px; }
+
+    .phases-grid {
+      padding: 12px 16px;
+      grid-template-columns: 1fr;
+      gap: 10px;
+    }
+
+    .phase-header  { padding: 12px 14px 10px; gap: 8px; }
+    .phase-meta    { gap: 8px; }
+    .phase-title   { font-size: 13px; }
+    .phase-duration{ font-size: 11px; }
+    .phase-pct     { font-size: 18px; }
+    .phase-id      { font-size: 10px; padding: 2px 6px; }
+
+    .phase-progress-bar { margin: 0 14px; }
+    .phase-body    { padding: 10px 14px; max-height: none; }
+    .phase-footer  { padding: 6px 14px 10px; }
+
+    .task          { font-size: 12px; padding: 3px 0; gap: 6px; }
+    .subphase-title{ font-size: 11px; }
+
+    .badge { font-size: 9px; padding: 2px 6px; }
+  }
+
+  /* Очень маленький (≤360px, старые Android) */
+  @media (max-width: 360px) {
+    .status-row { grid-template-columns: 1fr; }
+    .overall    { grid-template-columns: 1fr; }
+    .overall-pct{ text-align: left; }
+  }
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <div>
+    <div class="site-title">ТОО «Первое кредитное товарищество»</div>
+    <div class="site-sub">Roadmap разработки веб-платформы и мобильного приложения</div>
+  </div>
+  <div class="updated">Обновлено: 24 мая 2026 г. в 21:25</div>
+</header>
+
+<div class="overall">
+  <div class="overall-bar-wrap">
+    <div class="overall-label">Общий прогресс — 76 из 101 задач выполнено</div>
+    <div class="overall-bar">
+      <div class="overall-fill" style="width:75%"></div>
+    </div>
+  </div>
+  <div>
+    <div class="overall-pct">75%</div>
+    <div class="overall-sub">76 / 101</div>
+  </div>
+</div>
+
+<div class="status-row">
+  <div class="status-card highlight">
+    <div class="status-card-label">Текущая фаза</div>
+    <div class="status-card-value">5 — Тестирование</div>
+  </div>
+  <div class="status-card">
+    <div class="status-card-label">Статус</div>
+    <div class="status-card-value">ЗАВЕРШЕНА (9/9)</div>
+  </div>
+  <div class="status-card">
+    <div class="status-card-label">Последнее сделанное</div>
+    <div class="status-card-value">5.9 — TestFlight + Firebase — ЗАВЕРШЕНА (2026-05-24) | eas.json, mobile-dist.yml, _docs/mobile-distribution.md</div>
+  </div>
+  <div class="status-card">
+    <div class="status-card-label">Следующий шаг</div>
+    <div class="status-card-value">Фаза 6 — Мониторинг (Grafana + Prometheus + Loki + Alertmanager)</div>
+  </div>
+  
+  <div class="status-card" style="border-color:#FCA5A5;background:#FEF2F2">
+    <div class="status-card-label" style="color:#991B1B">⚠ Заблокировано</div>
+    <div class="status-card-value" style="color:#991B1B">Нужна Oracle Cloud VM + DNS staging.pkt.kz → применить infra/staging-bootstrap.sh</div>
+  </div>
+</div>
+
+<div class="phases-grid">
+  
+  <div class="phase-card" style="--phase-color:#1B4F8A;--phase-bg:#D6E4F5">
+    <div class="phase-header">
+      <div class="phase-meta">
+        <span class="phase-id">Фаза 0</span>
+        <div>
+          <div class="phase-title">Подготовка и проектирование</div>
+          <div class="phase-duration">2–3 нед.</div>
+        </div>
+      </div>
+      <div class="phase-right">
+        <span class="badge badge-done">Готово</span>
+        <span class="phase-pct">100%</span>
+      </div>
+    </div>
+    <div class="phase-progress-bar"><div class="phase-progress-fill" style="width:100%"></div></div>
+    <div class="phase-body">
+      <div class="task task-done"><span class="task-icon done">✓</span><span>Монорепозиторий Turborepo: apps/web, apps/mobile, apps/api, packages/shared</span></div><div class="task task-done"><span class="task-icon done">✓</span><span>Git: init, Git Flow (main/develop/feature/\*), защита веток</span></div><div class="task task-done"><span class="task-icon done">✓</span><span>ER-диаграмма БД (согласовать до кода)</span></div><div class="task task-done"><span class="task-icon done">✓</span><span>OpenAPI 3.0 спецификация всех эндпоинтов</span></div><div class="task task-done"><span class="task-icon done">✓</span><span>Ролевая матрица: роль × эндпоинт × действие</span></div><div class="task task-done"><span class="task-icon done">✓</span><span>Wireframes: главная, ЛК, карточка заявки (Экспертиза), дашборд</span></div><div class="task task-done"><span class="task-icon done">✓</span><span>Линтеры: ESLint+Prettier (TS), golangci-lint (Go), commitlint</span></div>
+    </div>
+    <div class="phase-footer">7 из 7 задач выполнено</div>
+  </div>
+
+  <div class="phase-card" style="--phase-color:#166534;--phase-bg:#DCFCE7">
+    <div class="phase-header">
+      <div class="phase-meta">
+        <span class="phase-id">Фаза 1</span>
+        <div>
+          <div class="phase-title">Локальная инфраструктура</div>
+          <div class="phase-duration">1–2 нед.</div>
+        </div>
+      </div>
+      <div class="phase-right">
+        <span class="badge badge-done">Готово</span>
+        <span class="phase-pct">100%</span>
+      </div>
+    </div>
+    <div class="phase-progress-bar"><div class="phase-progress-fill" style="width:100%"></div></div>
+    <div class="phase-body">
+      <div class="task task-done"><span class="task-icon done">✓</span><span>docker-compose.yml: PostgreSQL, Redis, MinIO, NATS, Keycloak, Directus</span></div><div class="task task-done"><span class="task-icon done">✓</span><span>PostgreSQL 16 + PostGIS + TimescaleDB, первые миграции</span></div><div class="task task-done"><span class="task-icon done">✓</span><span>Keycloak: Realm КТ, роли (public/borrower/employee/expert/admin), клиенты (web/mobile/grafana/directus), PKCE для мобилки</span></div><div class="task task-done"><span class="task-icon done">✓</span><span>MinIO: бакеты (documents/uploads/media/templates), политики по ролям</span></div><div class="task task-done"><span class="task-icon done">✓</span><span>NATS JetStream: стримы (application-events/notifications/sync-events)</span></div><div class="task task-done"><span class="task-icon done">✓</span><span>Directus: коллекции (programs/news/faq/projects), OIDC через Keycloak</span></div><div class="task task-done"><span class="task-icon done">✓</span><span>Redis: настройка, префиксы ключей (session:/cache:/ratelimit:)</span></div><div class="task task-done"><span class="task-icon done">✓</span><span>Seed-данные: пользователи всех ролей, заёмщики, займы, заявки на всех этапах</span></div>
+    </div>
+    <div class="phase-footer">8 из 8 задач выполнено</div>
+  </div>
+
+  <div class="phase-card" style="--phase-color:#1B4F8A;--phase-bg:#D6E4F5">
+    <div class="phase-header">
+      <div class="phase-meta">
+        <span class="phase-id">Фаза 2</span>
+        <div>
+          <div class="phase-title">Go-бэкенд</div>
+          <div class="phase-duration">6–10 нед., параллельно с Ф.3+4</div>
+        </div>
+      </div>
+      <div class="phase-right">
+        <span class="badge badge-done">Готово</span>
+        <span class="phase-pct">100%</span>
+      </div>
+    </div>
+    <div class="phase-progress-bar"><div class="phase-progress-fill" style="width:100%"></div></div>
+    <div class="phase-body">
+      <div class="task task-done"><span class="task-icon done">✓</span><span>Структура Go-проекта (/cmd /internal /pkg /migrations) + chi + middleware</span></div><div class="task task-done"><span class="task-icon done">✓</span><span>JWT middleware: проверка Keycloak токенов, извлечение ролей, RequireRole()</span></div><div class="task task-done"><span class="task-icon done">✓</span><span>golang-migrate: все миграции по ER-диаграмме</span></div><div class="task task-done"><span class="task-icon done">✓</span><span>Модуль пользователей: CRUD, синхронизация Keycloak, профиль заёмщика</span></div><div class="task task-done"><span class="task-icon done">✓</span><span>Модуль программ кредитования: публичные + защищённые эндпоинты</span></div><div class="task task-done"><span class="task-icon done">✓</span><span>Модуль заявок: создание, передача в NATS, статус, история</span></div><div class="task task-done"><span class="task-icon done">✓</span><span>Модуль ЛК: документы (presigned MinIO URL), график платежей, обращения</span></div><div class="task task-done"><span class="task-icon done">✓</span><span>Модуль уведомлений: NATS consumer → Resend (шаблоны React Email)</span></div><div class="task task-done"><span class="task-icon done">✓</span><span>FSM жизненного цикла заявки (PostgreSQL + NATS)</span></div><div class="task task-done"><span class="task-icon done">✓</span><span>Маршрутизация по ролям при смене статуса</span></div><div class="task task-done"><span class="task-icon done">✓</span><span>API рабочего места эксперта (все вкладки карточки)</span></div><div class="task task-done"><span class="task-icon done">✓</span><span>Карточка залога как самостоятельная сущность</span></div><div class="task task-done"><span class="task-icon done">✓</span><span>Генерация PDF протокола КК</span></div><div class="task task-done"><span class="task-icon done">✓</span><span>Формирование договора займа + графика платежей</span></div><div class="task task-done"><span class="task-icon done">✓</span><span>Процедура выдачи: передача в 1С + запись в БД</span></div><div class="task task-done"><span class="task-icon done">✓</span><span>Аудит-лог: только INSERT (кто/что/когда)</span></div><div class="task task-done"><span class="task-icon done">✓</span><span>Cron-брокер: 1С HTTP-сервисы → Redis (TTL 30 мин) → PostgreSQL</span></div><div class="task task-done"><span class="task-icon done">✓</span><span>Эндпоинты: займы, графики, залоги, задолженности</span></div><div class="task task-done"><span class="task-icon done">✓</span><span>Мониторинг залогов: страховка, инвентаризация, нарушения → NATS</span></div><div class="task task-done"><span class="task-icon done">✓</span><span>Go-прокси к Anthropic API + rate limit по IP</span></div><div class="task task-done"><span class="task-icon done">✓</span><span>System prompt: программы КТ + FAQ из Directus</span></div>
+    </div>
+    <div class="phase-footer">21 из 21 задач выполнено</div>
+  </div>
+
+  <div class="phase-card" style="--phase-color:#4C1D95;--phase-bg:#EDE9FE">
+    <div class="phase-header">
+      <div class="phase-meta">
+        <span class="phase-id">Фаза 3</span>
+        <div>
+          <div class="phase-title">Фронтенд Next.js</div>
+          <div class="phase-duration">8–12 нед., параллельно</div>
+        </div>
+      </div>
+      <div class="phase-right">
+        <span class="badge badge-done">Готово</span>
+        <span class="phase-pct">100%</span>
+      </div>
+    </div>
+    <div class="phase-progress-bar"><div class="phase-progress-fill" style="width:100%"></div></div>
+    <div class="phase-body">
+      <div class="task task-done"><span class="task-icon done">✓</span><span>Next.js 14+ App Router + TypeScript + TailwindCSS, структура /app /components /lib /hooks /types</span></div><div class="task task-done"><span class="task-icon done">✓</span><span>Дизайн-система: палитра КТ, базовые компоненты</span></div><div class="task task-done"><span class="task-icon done">✓</span><span>next-auth + Keycloak: middleware роутов, refresh токена</span></div><div class="task task-done"><span class="task-icon done">✓</span><span>API-клиент: fetch-обёртка + JWT auto-inject + openapi-typescript типы</span></div><div class="task task-done"><span class="task-icon done">✓</span><span>Главная: баннер, счётчики KPI, мини-карта SVG, партнёры, события, отзывы, новости</span></div><div class="task task-done"><span class="task-icon done">✓</span><span>Калькулятор: аннуитет/дифф., таблица платежей, передача в CRM</span></div><div class="task task-done"><span class="task-icon done">✓</span><span>Программы: сетка, фильтр, сравнение, детальная страница</span></div><div class="task task-done"><span class="task-icon done">✓</span><span>О компании, Проекты (lightbox), Новости, Контакты (Leaflet), FAQ</span></div><div class="task task-done"><span class="task-icon done">✓</span><span>MapLibre GL JS: полигоны районов ЗКО из PostGIS, панель слоёв</span></div><div class="task task-done"><span class="task-icon done">✓</span><span>Публичные слои: метки хозяйств (кластеры), деятельность, покрытие, инфраструктура, бонитет, угодья, риски, сезонность</span></div><div class="task task-done"><span class="task-icon done">✓</span><span>Слои employee+: тепловая карта портфеля, статус займов</span></div><div class="task task-done"><span class="task-icon done">✓</span><span>Popup хозяйства: публичные данные + кнопка досье для employee+</span></div><div class="task task-done"><span class="task-icon done">✓</span><span>Дашборд ЛК</span></div><div class="task task-done"><span class="task-icon done">✓</span><span>Документы (presigned URL, PDF preview)</span></div><div class="task task-done"><span class="task-icon done">✓</span><span>График платежей (визуализация)</span></div><div class="task task-done"><span class="task-icon done">✓</span><span>Обращения (тикет-система)</span></div><div class="task task-done"><span class="task-icon done">✓</span><span>Центр уведомлений</span></div><div class="task task-done"><span class="task-icon done">✓</span><span>Аналитика: Grafana iframe + Keycloak SSO</span></div><div class="task task-done"><span class="task-icon done">✓</span><span>Экспертиза: очередь заявок + карточка со всеми вкладками + FSM переходы</span></div><div class="task task-done"><span class="task-icon done">✓</span><span>Инлайн-редактор контента (Directus API)</span></div><div class="task task-done"><span class="task-icon done">✓</span><span>Почта и диск: deeplinks на M365/GW</span></div><div class="task task-done"><span class="task-icon done">✓</span><span>Чат-виджет: история сессии, индикатор набора, создание тикета</span></div><div class="task task-done"><span class="task-icon done">✓</span><span>Интеграция с assistant-svc</span></div>
+    </div>
+    <div class="phase-footer">23 из 23 задач выполнено</div>
+  </div>
+
+  <div class="phase-card" style="--phase-color:#134E4A;--phase-bg:#CCFBF1">
+    <div class="phase-header">
+      <div class="phase-meta">
+        <span class="phase-id">Фаза 4</span>
+        <div>
+          <div class="phase-title">Мобильное приложение React Native</div>
+          <div class="phase-duration">8–12 нед., параллельно</div>
+        </div>
+      </div>
+      <div class="phase-right">
+        <span class="badge badge-done">Готово</span>
+        <span class="phase-pct">100%</span>
+      </div>
+    </div>
+    <div class="phase-progress-bar"><div class="phase-progress-fill" style="width:100%"></div></div>
+    <div class="phase-body">
+      <div class="task task-done"><span class="task-icon done">✓</span><span>Expo + React Native: apps/mobile, Expo Router, NativeWind, shared-пакеты</span></div><div class="task task-done"><span class="task-icon done">✓</span><span>Auth: PKCE через expo-auth-session + Keycloak, expo-secure-store</span></div><div class="task task-done"><span class="task-icon done">✓</span><span>Публичные экраны: главная, программы, детали, о компании, контакты, FAQ, новости</span></div><div class="task task-done"><span class="task-icon done">✓</span><span>ЛК: дашборд, документы (PDF viewer), график, обращения, уведомления</span></div><div class="task task-done"><span class="task-icon done">✓</span><span>Карта: react-native-maps, кластеры, попап хозяйства</span></div><div class="task task-done"><span class="task-icon done">✓</span><span>Push-уведомления: Expo Notifications + FCM + APNs</span></div><div class="task task-done"><span class="task-icon done">✓</span><span>Калькулятор + CRM-форма в WebView (только форма заявки)</span></div><div class="task task-done"><span class="task-icon done">✓</span><span>Офлайн-режим: react-query + AsyncStorage</span></div>
+    </div>
+    <div class="phase-footer">8 из 8 задач выполнено</div>
+  </div>
+
+  <div class="phase-card" style="--phase-color:#92400E;--phase-bg:#FEF3C7">
+    <div class="phase-header">
+      <div class="phase-meta">
+        <span class="phase-id">Фаза 5</span>
+        <div>
+          <div class="phase-title">Тестирование</div>
+          <div class="phase-duration">3–4 нед.</div>
+        </div>
+      </div>
+      <div class="phase-right">
+        <span class="badge badge-done">Готово</span>
+        <span class="phase-pct">100%</span>
+      </div>
+    </div>
+    <div class="phase-progress-bar"><div class="phase-progress-fill" style="width:100%"></div></div>
+    <div class="phase-body">
+      <div class="task task-done"><span class="task-icon done">✓</span><span>Unit-тесты Go (testing + testify, ≥70%)</span></div><div class="task task-done"><span class="task-icon done">✓</span><span>Unit-тесты Frontend (Vitest + RTL)</span></div><div class="task task-done"><span class="task-icon done">✓</span><span>Integration-тесты API (testcontainers-go)</span></div><div class="task task-done"><span class="task-icon done">✓</span><span>E2E-тесты Playwright: ключевые сценарии всех ролей</span></div><div class="task task-done"><span class="task-icon done">✓</span><span>Ручная проверка ролевой матрицы: каждая роль × раздел × действие</span></div><div class="task task-done"><span class="task-icon done">✓</span><span>Staging-деплой (Oracle Cloud, отдельный namespace k3s)</span></div><div class="task task-done"><span class="task-icon done">✓</span><span>Нагрузочное тестирование (k6: 50–200 пользователей)</span></div><div class="task task-done"><span class="task-icon done">✓</span><span>Проверка цикла бэкапа: pg_dump → B2 → восстановление</span></div><div class="task task-done"><span class="task-icon done">✓</span><span>TestFlight (iOS) + Firebase App Distribution (Android)</span></div>
+    </div>
+    <div class="phase-footer">9 из 9 задач выполнено</div>
+  </div>
+
+  <div class="phase-card" style="--phase-color:#1B4F8A;--phase-bg:#D6E4F5">
+    <div class="phase-header">
+      <div class="phase-meta">
+        <span class="phase-id">Фаза 6</span>
+        <div>
+          <div class="phase-title">Настройка продакшена</div>
+          <div class="phase-duration">1–2 нед.</div>
+        </div>
+      </div>
+      <div class="phase-right">
+        <span class="badge badge-todo">Не начато</span>
+        <span class="phase-pct">0%</span>
+      </div>
+    </div>
+    <div class="phase-progress-bar"><div class="phase-progress-fill" style="width:0%"></div></div>
+    <div class="phase-body">
+      <div class="task "><span class="task-icon todo">○</span><span>Oracle Cloud: VM.Standard.A1.Flex (4 OCPU, 24GB), SSH, firewall</span></div><div class="task "><span class="task-icon todo">○</span><span>k3s установка, kubeconfig</span></div><div class="task "><span class="task-icon todo">○</span><span>Cloudflare DNS: A-запись, проксирование, HTTPS, Page Rules</span></div><div class="task "><span class="task-icon todo">○</span><span>SSL: Cloudflare Origin Certificate + k3s Ingress, режим Full Strict</span></div><div class="task "><span class="task-icon todo">○</span><span>Kubernetes манифесты: Deployment+Service+Ingress+ConfigMap+Secrets</span></div><div class="task "><span class="task-icon todo">○</span><span>PostgreSQL Helm (Bitnami): PV, PostGIS+TimescaleDB, отдельный user</span></div><div class="task "><span class="task-icon todo">○</span><span>CI/CD: GitHub Actions → тесты → docker build → GHCR → kubectl rollout</span></div><div class="task "><span class="task-icon todo">○</span><span>Keycloak прод: Helm, SAML M365/GW, MFA, email через Resend</span></div><div class="task "><span class="task-icon todo">○</span><span>kube-prometheus-stack: Grafana+Prometheus+Loki, алерты</span></div><div class="task "><span class="task-icon todo">○</span><span>UptimeRobot: мониторы на главную, /api/v1/health, Keycloak</span></div><div class="task "><span class="task-icon todo">○</span><span>Backblaze B2 + CronJob: pg_dump каждые 6ч, хранение 30 дней</span></div><div class="task "><span class="task-icon todo">○</span><span>MinIO прод: PVC, шифрование at-rest, lifecycle policies</span></div>
+    </div>
+    <div class="phase-footer">0 из 12 задач выполнено</div>
+  </div>
+
+  <div class="phase-card" style="--phase-color:#134E4A;--phase-bg:#CCFBF1">
+    <div class="phase-header">
+      <div class="phase-meta">
+        <span class="phase-id">Фаза 7</span>
+        <div>
+          <div class="phase-title">Soft Launch</div>
+          <div class="phase-duration">2–3 нед.</div>
+        </div>
+      </div>
+      <div class="phase-right">
+        <span class="badge badge-todo">Не начато</span>
+        <span class="phase-pct">0%</span>
+      </div>
+    </div>
+    <div class="phase-progress-bar"><div class="phase-progress-fill" style="width:0%"></div></div>
+    <div class="phase-body">
+      <div class="task "><span class="task-icon todo">○</span><span>Миграция данных из 1С: заёмщики, займы, графики, залоги</span></div><div class="task "><span class="task-icon todo">○</span><span>Наполнение Directus: программы, FAQ (20–30 вопросов), новости, команда</span></div><div class="task "><span class="task-icon todo">○</span><span>Keycloak: учётные записи сотрудников, проверка SAML SSO</span></div><div class="task "><span class="task-icon todo">○</span><span>Пилотные заёмщики (5–10): ЛК, документы, обращения</span></div><div class="task "><span class="task-icon todo">○</span><span>Обучение сотрудников: редактор, Экспертиза, Аналитика</span></div><div class="task "><span class="task-icon todo">○</span><span>Координаты хозяйств на карте, геоданные кадастра</span></div><div class="task "><span class="task-icon todo">○</span><span>Исправление проблем (0 критичных багов до полного запуска)</span></div>
+    </div>
+    <div class="phase-footer">0 из 7 задач выполнено</div>
+  </div>
+
+  <div class="phase-card" style="--phase-color:#4C1D95;--phase-bg:#EDE9FE">
+    <div class="phase-header">
+      <div class="phase-meta">
+        <span class="phase-id">Фаза 8</span>
+        <div>
+          <div class="phase-title">Публичный запуск</div>
+          <div class="phase-duration">2 нед.</div>
+        </div>
+      </div>
+      <div class="phase-right">
+        <span class="badge badge-todo">Не начато</span>
+        <span class="phase-pct">0%</span>
+      </div>
+    </div>
+    <div class="phase-progress-bar"><div class="phase-progress-fill" style="width:0%"></div></div>
+    <div class="phase-body">
+      <div class="task "><span class="task-icon todo">○</span><span>App Store Connect: аккаунт $99/год, метаданные, модерация (3–7 дней)</span></div><div class="task "><span class="task-icon todo">○</span><span>Google Play Console: аккаунт $25, метаданные, проверка (1–3 дня)</span></div><div class="task "><span class="task-icon todo">○</span><span>EAS Build: CI/CD для мобилки → автосборка → сторы</span></div><div class="task "><span class="task-icon todo">○</span><span>Анонс: новость на сайте, рассылка партнёрам и заёмщикам</span></div><div class="task "><span class="task-icon todo">○</span><span>SEO: sitemap.xml, robots.txt, мета-теги, OG-теги, Google Search Console</span></div><div class="task "><span class="task-icon todo">○</span><span>Активный мониторинг первых дней (Grafana + Loki)</span></div>
+    </div>
+    <div class="phase-footer">0 из 6 задач выполнено</div>
+  </div>
+
+  <div class="phase-card" style="--phase-color:#1B4F8A;--phase-bg:#D6E4F5">
+    <div class="phase-header">
+      <div class="phase-meta">
+        <span class="phase-id">Фаза 9</span>
+        <div>
+          <div class="phase-title">Пост-запуск</div>
+          <div class="phase-duration">∞</div>
+        </div>
+      </div>
+      <div class="phase-right">
+        <span class="badge badge-todo">Не начато</span>
+        <span class="phase-pct">0%</span>
+      </div>
+    </div>
+    <div class="phase-progress-bar"><div class="phase-progress-fill" style="width:0%"></div></div>
+    <div class="phase-body">
+      
+    </div>
+    <div class="phase-footer">0 из 0 задач выполнено</div>
+  </div>
+</div>
+
+</body>
+</html>
