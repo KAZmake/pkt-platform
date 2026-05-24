@@ -15,20 +15,21 @@ const ACTIVITY_OPTIONS: { value: ActivityFilter; label: string }[] = [
 ];
 
 export function ProgramsClient({ programs }: { programs: LoanProgram[] }) {
+  const list = Array.isArray(programs) ? programs : [];
   const [activity, setActivity] = useState<ActivityFilter>('all');
   const [compareIds, setCompareIds] = useState<string[]>([]);
 
   const filtered = useMemo(
     () =>
-      programs.filter(
+      list.filter(
         (p) =>
           activity === 'all' ||
           (p.activityTypes ?? []).includes(activity as LoanProgram['activityTypes'][0]),
       ),
-    [programs, activity],
+    [list, activity],
   );
 
-  const comparePrograms = programs.filter((p) => compareIds.includes(p.id));
+  const comparePrograms = list.filter((p) => compareIds.includes(p.id));
 
   function toggleCompare(id: string) {
     setCompareIds((prev) =>

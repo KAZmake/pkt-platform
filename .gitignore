@@ -50,6 +50,9 @@ lerna-debug.log*
 # ─── Testing / Coverage ─────────────────────────────────────────────────────
 coverage/
 .nyc_output/
+apps/web/e2e/.auth/
+apps/web/playwright-report/
+apps/web/test-results/
 
 # ─── TypeScript ─────────────────────────────────────────────────────────────
 *.tsbuildinfo

@@ -31,7 +31,7 @@ function ProgramCard({ program }: { program: LoanProgram }) {
 }
 
 export function ProgramsTeaser({ programs }: { programs: LoanProgram[] }) {
-  const featured = programs.slice(0, 3);
+  const featured = (Array.isArray(programs) ? programs : []).slice(0, 3);
   return (
     <section className="py-16 bg-white">
       <div className="container-page">
