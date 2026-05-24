@@ -9,6 +9,14 @@ on:
         description: 'Service to deploy (all / web / core-api / expertise-svc / sync-svc / assistant-svc)'
         required: false
         default: 'all'
+      run_load_test:
+        description: 'Run k6 load test after deploy? (true/false)'
+        required: false
+        default: 'false'
+      k6_scenario:
+        description: 'k6 scenario to run (public / borrower / employee / spike / all)'
+        required: false
+        default: 'public'
 
 env:
   REGISTRY: ghcr.io
@@ -173,3 +181,46 @@ jobs:
             --rm -it -- curl -sf http://web:3000/ -o /dev/null && echo "Web OK"
           kubectl run smoke-api --image=curlimages/curl:latest -n staging --restart=Never \
             --rm -it -- curl -sf http://core-api:8080/api/v1/health && echo "API OK"
+
+  # ─── k6 Load Tests (on-demand only) ─────────────────────────────────────────
+  load-test:
+    name: k6 load test (${{ github.event.inputs.k6_scenario || 'public' }})
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.run_load_test == 'true'
+    needs: [deploy-staging]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install k6
+        run: |
+          sudo gpg -k
+          sudo gpg --no-default-keyring --keyring /usr/share/keyrings/k6-archive-keyring.gpg \
+            --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69
+          echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" \
+            | sudo tee /etc/apt/sources.list.d/k6.list
+          sudo apt-get update && sudo apt-get install -y k6
+
+      - name: Run k6 scenario
+        env:
+          BASE_URL: https://staging.pkt.kz
+          WEB_URL: https://staging.pkt.kz
+          EXPERTISE_URL: https://staging.pkt.kz
+          SYNC_URL: https://staging.pkt.kz
+          ASSISTANT_URL: https://staging.pkt.kz
+        run: |
+          SCENARIO="${{ github.event.inputs.k6_scenario || 'public' }}"
+          k6 run \
+            -e BASE_URL="$BASE_URL" \
+            -e WEB_URL="$WEB_URL" \
+            -e EXPERTISE_URL="$EXPERTISE_URL" \
+            -e SYNC_URL="$SYNC_URL" \
+            -e ASSISTANT_URL="$ASSISTANT_URL" \
+            --out json=k6-results.json \
+            "k6/scenarios/${SCENARIO}.js"
+
+      - name: Upload k6 results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: k6-results-${{ github.run_id }}
+          path: k6-results.json
