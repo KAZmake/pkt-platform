@@ -10,12 +10,24 @@ import (
 	"github.com/google/uuid"
 )
 
-type UserService struct {
-	users     *repository.UserRepository
-	borrowers *repository.BorrowerRepository
+type userRepo interface {
+	Upsert(ctx context.Context, u *model.User) (*model.User, error)
+	GetByID(ctx context.Context, id uuid.UUID) (*model.User, error)
+	Update(ctx context.Context, id uuid.UUID, inp repository.UpdateUserInput) (*model.User, error)
+	List(ctx context.Context, limit, offset int) ([]*model.User, int, error)
 }
 
-func NewUserService(users *repository.UserRepository, borrowers *repository.BorrowerRepository) *UserService {
+type borrowerRepo interface {
+	GetByUserID(ctx context.Context, userID uuid.UUID) (*model.Borrower, error)
+	Update(ctx context.Context, id uuid.UUID, inp repository.UpdateBorrowerInput) (*model.Borrower, error)
+}
+
+type UserService struct {
+	users     userRepo
+	borrowers borrowerRepo
+}
+
+func NewUserService(users userRepo, borrowers borrowerRepo) *UserService {
 	return &UserService{users: users, borrowers: borrowers}
 }
 

@@ -13,12 +13,21 @@ import (
 	"github.com/nats-io/nats.go/jetstream"
 )
 
+type applicationRepo interface {
+	Create(ctx context.Context, inp repository.CreateApplicationInput) (*model.Application, error)
+	GetByID(ctx context.Context, id uuid.UUID) (*model.Application, error)
+	GetHistory(ctx context.Context, id uuid.UUID) ([]*model.ApplicationHistory, error)
+	ListByBorrower(ctx context.Context, borrowerID uuid.UUID) ([]*model.Application, error)
+	ListAll(ctx context.Context, status string) ([]*model.Application, error)
+	UpdateStatus(ctx context.Context, appID, actorID uuid.UUID, toStatus string, comment *string) (*model.Application, error)
+}
+
 type ApplicationService struct {
-	repo *repository.ApplicationRepository
+	repo applicationRepo
 	js   jetstream.JetStream // nil if NATS unavailable
 }
 
-func NewApplicationService(repo *repository.ApplicationRepository, js jetstream.JetStream) *ApplicationService {
+func NewApplicationService(repo applicationRepo, js jetstream.JetStream) *ApplicationService {
 	return &ApplicationService{repo: repo, js: js}
 }
 

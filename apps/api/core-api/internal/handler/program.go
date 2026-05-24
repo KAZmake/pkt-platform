@@ -1,20 +1,30 @@
 package handler
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 
+	"github.com/KAZmake/pkt-platform/apps/api/core-api/internal/model"
 	"github.com/KAZmake/pkt-platform/apps/api/core-api/internal/repository"
-	"github.com/KAZmake/pkt-platform/apps/api/core-api/internal/service"
 	"github.com/KAZmake/pkt-platform/apps/api/core-api/pkg/response"
 	"github.com/go-chi/chi/v5"
 )
 
-type ProgramHandler struct {
-	svc *service.ProgramService
+type programSvc interface {
+	ListActive(ctx context.Context) ([]*model.LoanProgram, error)
+	ListAll(ctx context.Context) ([]*model.LoanProgram, error)
+	GetByID(ctx context.Context, id string) (*model.LoanProgram, error)
+	Create(ctx context.Context, inp repository.CreateProgramInput) (*model.LoanProgram, error)
+	Update(ctx context.Context, id string, inp repository.UpdateProgramInput) (*model.LoanProgram, error)
+	Deactivate(ctx context.Context, id string) error
 }
 
-func NewProgramHandler(svc *service.ProgramService) *ProgramHandler {
+type ProgramHandler struct {
+	svc programSvc
+}
+
+func NewProgramHandler(svc programSvc) *ProgramHandler {
 	return &ProgramHandler{svc: svc}
 }
 

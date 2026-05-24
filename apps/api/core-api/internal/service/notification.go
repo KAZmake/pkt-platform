@@ -8,11 +8,19 @@ import (
 	"github.com/google/uuid"
 )
 
-type NotificationService struct {
-	repo *repository.NotificationRepository
+type notificationRepo interface {
+	Create(ctx context.Context, inp repository.CreateNotificationInput) (*model.Notification, error)
+	ListByUser(ctx context.Context, userID uuid.UUID, unreadOnly bool) ([]*model.Notification, error)
+	UnreadCount(ctx context.Context, userID uuid.UUID) (int, error)
+	MarkRead(ctx context.Context, id, userID uuid.UUID) error
+	MarkAllRead(ctx context.Context, userID uuid.UUID) error
 }
 
-func NewNotificationService(repo *repository.NotificationRepository) *NotificationService {
+type NotificationService struct {
+	repo notificationRepo
+}
+
+func NewNotificationService(repo notificationRepo) *NotificationService {
 	return &NotificationService{repo: repo}
 }
 

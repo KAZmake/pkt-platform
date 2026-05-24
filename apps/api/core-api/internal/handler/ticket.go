@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 
@@ -11,11 +12,20 @@ import (
 	"github.com/google/uuid"
 )
 
-type TicketHandler struct {
-	svc *service.TicketService
+type ticketSvc interface {
+	Create(ctx context.Context, borrowerID uuid.UUID, inp service.CreateTicketInput) (*model.Ticket, error)
+	GetWithMessages(ctx context.Context, id uuid.UUID) (*model.Ticket, []*model.TicketMessage, error)
+	ListForBorrower(ctx context.Context, borrowerID uuid.UUID) ([]*model.Ticket, error)
+	ListAll(ctx context.Context, status string) ([]*model.Ticket, error)
+	ChangeStatus(ctx context.Context, id uuid.UUID, status string) (*model.Ticket, error)
+	AddMessage(ctx context.Context, ticketID, authorID uuid.UUID, inp service.AddMessageInput) (*model.TicketMessage, error)
 }
 
-func NewTicketHandler(svc *service.TicketService) *TicketHandler {
+type TicketHandler struct {
+	svc ticketSvc
+}
+
+func NewTicketHandler(svc ticketSvc) *TicketHandler {
 	return &TicketHandler{svc: svc}
 }
 

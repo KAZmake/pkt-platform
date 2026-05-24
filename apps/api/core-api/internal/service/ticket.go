@@ -23,11 +23,21 @@ var validTicketStatuses = map[string]bool{
 	"closed":      true,
 }
 
-type TicketService struct {
-	repo *repository.TicketRepository
+type ticketRepo interface {
+	Create(ctx context.Context, inp repository.CreateTicketInput) (*model.Ticket, error)
+	GetByID(ctx context.Context, id uuid.UUID) (*model.Ticket, error)
+	GetMessages(ctx context.Context, ticketID uuid.UUID) ([]*model.TicketMessage, error)
+	ListByBorrower(ctx context.Context, borrowerID uuid.UUID) ([]*model.Ticket, error)
+	ListAll(ctx context.Context, status string) ([]*model.Ticket, error)
+	UpdateStatus(ctx context.Context, id uuid.UUID, status string) (*model.Ticket, error)
+	AddMessage(ctx context.Context, ticketID, authorID uuid.UUID, body string) (*model.TicketMessage, error)
 }
 
-func NewTicketService(repo *repository.TicketRepository) *TicketService {
+type TicketService struct {
+	repo ticketRepo
+}
+
+func NewTicketService(repo ticketRepo) *TicketService {
 	return &TicketService{repo: repo}
 }
 

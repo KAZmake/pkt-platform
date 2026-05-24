@@ -6,7 +6,7 @@ import (
 	"math"
 	"time"
 
-	"github.com/KAZmake/pkt-platform/apps/api/core-api/internal/repository"
+	"github.com/KAZmake/pkt-platform/apps/api/core-api/internal/model"
 	"github.com/google/uuid"
 )
 
@@ -27,12 +27,20 @@ type ScheduleResult struct {
 	Schedule      []ScheduleRow `json:"schedule"`
 }
 
-type ScheduleService struct {
-	appRepo     *repository.ApplicationRepository
-	programRepo *repository.ProgramRepository
+type scheduleAppRepo interface {
+	GetByID(ctx context.Context, id uuid.UUID) (*model.Application, error)
 }
 
-func NewScheduleService(appRepo *repository.ApplicationRepository, programRepo *repository.ProgramRepository) *ScheduleService {
+type scheduleProgramRepo interface {
+	GetByID(ctx context.Context, id string) (*model.LoanProgram, error)
+}
+
+type ScheduleService struct {
+	appRepo     scheduleAppRepo
+	programRepo scheduleProgramRepo
+}
+
+func NewScheduleService(appRepo scheduleAppRepo, programRepo scheduleProgramRepo) *ScheduleService {
 	return &ScheduleService{appRepo: appRepo, programRepo: programRepo}
 }
 

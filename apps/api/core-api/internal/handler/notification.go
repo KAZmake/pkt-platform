@@ -1,19 +1,29 @@
 package handler
 
 import (
+	"context"
 	"net/http"
 
-	"github.com/KAZmake/pkt-platform/apps/api/core-api/internal/service"
+	"github.com/KAZmake/pkt-platform/apps/api/core-api/internal/model"
+	"github.com/KAZmake/pkt-platform/apps/api/core-api/internal/repository"
 	"github.com/KAZmake/pkt-platform/apps/api/core-api/pkg/response"
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 )
 
-type NotificationHandler struct {
-	svc *service.NotificationService
+type notifSvc interface {
+	Create(ctx context.Context, inp repository.CreateNotificationInput) (*model.Notification, error)
+	ListForUser(ctx context.Context, userID uuid.UUID, unreadOnly bool) ([]*model.Notification, error)
+	UnreadCount(ctx context.Context, userID uuid.UUID) (int, error)
+	MarkRead(ctx context.Context, id, userID uuid.UUID) error
+	MarkAllRead(ctx context.Context, userID uuid.UUID) error
 }
 
-func NewNotificationHandler(svc *service.NotificationService) *NotificationHandler {
+type NotificationHandler struct {
+	svc notifSvc
+}
+
+func NewNotificationHandler(svc notifSvc) *NotificationHandler {
 	return &NotificationHandler{svc: svc}
 }
 

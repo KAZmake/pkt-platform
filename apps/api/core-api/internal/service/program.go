@@ -8,11 +8,19 @@ import (
 	"github.com/KAZmake/pkt-platform/apps/api/core-api/internal/repository"
 )
 
-type ProgramService struct {
-	repo *repository.ProgramRepository
+type programRepo interface {
+	List(ctx context.Context, activeOnly bool) ([]*model.LoanProgram, error)
+	GetByID(ctx context.Context, id string) (*model.LoanProgram, error)
+	Create(ctx context.Context, inp repository.CreateProgramInput) (*model.LoanProgram, error)
+	Update(ctx context.Context, id string, inp repository.UpdateProgramInput) (*model.LoanProgram, error)
+	SetActive(ctx context.Context, id string, active bool) error
 }
 
-func NewProgramService(repo *repository.ProgramRepository) *ProgramService {
+type ProgramService struct {
+	repo programRepo
+}
+
+func NewProgramService(repo programRepo) *ProgramService {
 	return &ProgramService{repo: repo}
 }
 
