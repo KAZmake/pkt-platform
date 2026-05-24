@@ -1,0 +1,354 @@
+# ─── core-api ─────────────────────────────────────────────────────────────────
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: core-api
+  namespace: staging
+  labels:
+    app: core-api
+    version: latest
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: core-api
+  template:
+    metadata:
+      labels:
+        app: core-api
+    spec:
+      containers:
+        - name: core-api
+          image: ghcr.io/kazmaker/pkt-platform/core-api:latest
+          ports:
+            - containerPort: 8080
+          envFrom:
+            - configMapRef:
+                name: pkt-staging-config
+          env:
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: pkt-staging-secrets
+                  key: POSTGRES_PASSWORD
+            - name: VALKEY_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: pkt-staging-secrets
+                  key: VALKEY_PASSWORD
+            - name: RESEND_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: pkt-staging-secrets
+                  key: RESEND_API_KEY
+          readinessProbe:
+            httpGet:
+              path: /api/v1/health
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /api/v1/health
+              port: 8080
+            initialDelaySeconds: 15
+            periodSeconds: 30
+          resources:
+            requests:
+              memory: 64Mi
+              cpu: 50m
+            limits:
+              memory: 256Mi
+              cpu: 500m
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: core-api
+  namespace: staging
+spec:
+  selector:
+    app: core-api
+  ports:
+    - port: 8080
+      targetPort: 8080
+---
+# ─── expertise-svc ────────────────────────────────────────────────────────────
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: expertise-svc
+  namespace: staging
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: expertise-svc
+  template:
+    metadata:
+      labels:
+        app: expertise-svc
+    spec:
+      containers:
+        - name: expertise-svc
+          image: ghcr.io/kazmaker/pkt-platform/expertise-svc:latest
+          ports:
+            - containerPort: 8081
+          envFrom:
+            - configMapRef:
+                name: pkt-staging-config
+          env:
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: pkt-staging-secrets
+                  key: POSTGRES_PASSWORD
+            - name: VALKEY_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: pkt-staging-secrets
+                  key: VALKEY_PASSWORD
+          readinessProbe:
+            httpGet:
+              path: /api/v1/health
+              port: 8081
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            requests:
+              memory: 64Mi
+              cpu: 50m
+            limits:
+              memory: 256Mi
+              cpu: 500m
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: expertise-svc
+  namespace: staging
+spec:
+  selector:
+    app: expertise-svc
+  ports:
+    - port: 8081
+      targetPort: 8081
+---
+# ─── sync-svc ─────────────────────────────────────────────────────────────────
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sync-svc
+  namespace: staging
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: sync-svc
+  template:
+    metadata:
+      labels:
+        app: sync-svc
+    spec:
+      containers:
+        - name: sync-svc
+          image: ghcr.io/kazmaker/pkt-platform/sync-svc:latest
+          ports:
+            - containerPort: 8082
+          envFrom:
+            - configMapRef:
+                name: pkt-staging-config
+          env:
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: pkt-staging-secrets
+                  key: POSTGRES_PASSWORD
+            - name: VALKEY_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: pkt-staging-secrets
+                  key: VALKEY_PASSWORD
+            - name: ONEC_BASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: pkt-staging-secrets
+                  key: ONEC_BASE_URL
+            - name: ONEC_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: pkt-staging-secrets
+                  key: ONEC_USERNAME
+            - name: ONEC_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: pkt-staging-secrets
+                  key: ONEC_PASSWORD
+          readinessProbe:
+            httpGet:
+              path: /api/v1/health
+              port: 8082
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            requests:
+              memory: 64Mi
+              cpu: 50m
+            limits:
+              memory: 256Mi
+              cpu: 500m
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: sync-svc
+  namespace: staging
+spec:
+  selector:
+    app: sync-svc
+  ports:
+    - port: 8082
+      targetPort: 8082
+---
+# ─── assistant-svc ────────────────────────────────────────────────────────────
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: assistant-svc
+  namespace: staging
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: assistant-svc
+  template:
+    metadata:
+      labels:
+        app: assistant-svc
+    spec:
+      containers:
+        - name: assistant-svc
+          image: ghcr.io/kazmaker/pkt-platform/assistant-svc:latest
+          ports:
+            - containerPort: 8083
+          envFrom:
+            - configMapRef:
+                name: pkt-staging-config
+          env:
+            - name: ANTHROPIC_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: pkt-staging-secrets
+                  key: ANTHROPIC_API_KEY
+          readinessProbe:
+            httpGet:
+              path: /api/v1/health
+              port: 8083
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            requests:
+              memory: 64Mi
+              cpu: 50m
+            limits:
+              memory: 256Mi
+              cpu: 500m
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: assistant-svc
+  namespace: staging
+spec:
+  selector:
+    app: assistant-svc
+  ports:
+    - port: 8083
+      targetPort: 8083
+---
+# ─── web (Next.js) ────────────────────────────────────────────────────────────
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web
+  namespace: staging
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: web
+  template:
+    metadata:
+      labels:
+        app: web
+    spec:
+      containers:
+        - name: web
+          image: ghcr.io/kazmaker/pkt-platform/web:latest
+          ports:
+            - containerPort: 3000
+          env:
+            - name: NODE_ENV
+              value: production
+            - name: NEXTAUTH_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: pkt-staging-config
+                  key: NEXTAUTH_URL
+            - name: NEXTAUTH_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: pkt-staging-secrets
+                  key: NEXTAUTH_SECRET
+            - name: AUTH_KEYCLOAK_ID
+              value: web
+            - name: AUTH_KEYCLOAK_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: pkt-staging-secrets
+                  key: AUTH_KEYCLOAK_SECRET
+            - name: AUTH_KEYCLOAK_ISSUER
+              valueFrom:
+                configMapKeyRef:
+                  name: pkt-staging-config
+                  key: AUTH_KEYCLOAK_ISSUER
+            - name: NEXT_PUBLIC_API_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: pkt-staging-config
+                  key: NEXT_PUBLIC_API_URL
+            - name: NEXT_PUBLIC_SYNC_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: pkt-staging-config
+                  key: NEXT_PUBLIC_SYNC_URL
+            - name: NEXT_PUBLIC_ASSISTANT_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: pkt-staging-config
+                  key: NEXT_PUBLIC_ASSISTANT_URL
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 3000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          resources:
+            requests:
+              memory: 256Mi
+              cpu: 200m
+            limits:
+              memory: 1Gi
+              cpu: 1000m
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: web
+  namespace: staging
+spec:
+  selector:
+    app: web
+  ports:
+    - port: 3000
+      targetPort: 3000

@@ -1,0 +1,45 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: pkt-staging-config
+  namespace: staging
+data:
+  ENVIRONMENT: 'staging'
+
+  # PostgreSQL
+  POSTGRES_HOST: 'postgres'
+  POSTGRES_PORT: '5432'
+
+  # Valkey / Redis
+  VALKEY_HOST: 'valkey'
+  VALKEY_PORT: '6379'
+
+  # NATS
+  NATS_URL: 'nats://nats:4222'
+
+  # Keycloak
+  KEYCLOAK_URL: 'http://keycloak:8080'
+  KEYCLOAK_REALM: 'pkt'
+  AUTH_KEYCLOAK_ISSUER: 'https://staging.pkt.kz/auth/realms/pkt'
+
+  # MinIO
+  MINIO_ENDPOINT: 'minio:9000'
+  MINIO_USE_SSL: 'false'
+
+  # Directus
+  DIRECTUS_URL: 'http://directus:8055'
+
+  # Service URLs (internal)
+  CORE_API_URL: 'http://core-api:8080'
+  EXPERTISE_SVC_URL: 'http://expertise-svc:8081'
+  SYNC_SVC_URL: 'http://sync-svc:8082'
+  ASSISTANT_SVC_URL: 'http://assistant-svc:8083'
+
+  # Next.js public vars (build-time — переопределяются в web Deployment)
+  NEXT_PUBLIC_API_URL: 'https://staging.pkt.kz/api/v1'
+  NEXT_PUBLIC_SYNC_URL: 'https://staging.pkt.kz/sync'
+  NEXT_PUBLIC_ASSISTANT_URL: 'https://staging.pkt.kz/assistant'
+
+  # App
+  NEXTAUTH_URL: 'https://staging.pkt.kz'
+  RESEND_FROM_EMAIL: 'noreply@pkt.kz'

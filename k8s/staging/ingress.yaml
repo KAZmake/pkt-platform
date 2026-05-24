@@ -1,0 +1,80 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: pkt-staging-ingress
+  namespace: staging
+  annotations:
+    # k3s использует Traefik по умолчанию
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    traefik.ingress.kubernetes.io/router.tls: 'true'
+    # Если используешь cert-manager:
+    # cert-manager.io/cluster-issuer: letsencrypt-prod
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - staging.pkt.kz
+      secretName: pkt-staging-tls
+  rules:
+    - host: staging.pkt.kz
+      http:
+        paths:
+          # Next.js — весь трафик (catch-all)
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: web
+                port:
+                  number: 3000
+
+          # Go API — проксируется через Next.js rewrites ИЛИ напрямую
+          - path: /api/v1
+            pathType: Prefix
+            backend:
+              service:
+                name: core-api
+                port:
+                  number: 8080
+
+          - path: /expertise/api
+            pathType: Prefix
+            backend:
+              service:
+                name: expertise-svc
+                port:
+                  number: 8081
+
+          - path: /sync
+            pathType: Prefix
+            backend:
+              service:
+                name: sync-svc
+                port:
+                  number: 8082
+
+          - path: /assistant
+            pathType: Prefix
+            backend:
+              service:
+                name: assistant-svc
+                port:
+                  number: 8083
+
+          # Keycloak — отдельный путь /auth
+          - path: /auth
+            pathType: Prefix
+            backend:
+              service:
+                name: keycloak
+                port:
+                  number: 8080
+
+          # Directus CMS
+          - path: /cms
+            pathType: Prefix
+            backend:
+              service:
+                name: directus
+                port:
+                  number: 8055

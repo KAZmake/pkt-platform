@@ -1,0 +1,377 @@
+# ─── Valkey (Redis) ───────────────────────────────────────────────────────────
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: valkey
+  namespace: staging
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: valkey
+  template:
+    metadata:
+      labels:
+        app: valkey
+    spec:
+      containers:
+        - name: valkey
+          image: valkey/valkey:8-alpine
+          ports:
+            - containerPort: 6379
+          args: [--requirepass, $(VALKEY_PASSWORD)]
+          env:
+            - name: VALKEY_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: pkt-staging-secrets
+                  key: VALKEY_PASSWORD
+          resources:
+            requests:
+              memory: 128Mi
+              cpu: 100m
+            limits:
+              memory: 512Mi
+              cpu: 500m
+          readinessProbe:
+            exec:
+              command: [valkey-cli, ping]
+            initialDelaySeconds: 5
+            periodSeconds: 5
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: valkey
+  namespace: staging
+spec:
+  selector:
+    app: valkey
+  ports:
+    - port: 6379
+      targetPort: 6379
+---
+# ─── NATS JetStream ───────────────────────────────────────────────────────────
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nats-config
+  namespace: staging
+data:
+  nats.conf: |
+    port: 4222
+    http_port: 8222
+    jetstream {
+      store_dir: /data
+      max_memory_store: 512MB
+      max_file_store: 2GB
+    }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nats
+  namespace: staging
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nats
+  template:
+    metadata:
+      labels:
+        app: nats
+    spec:
+      containers:
+        - name: nats
+          image: nats:2.10-alpine
+          args: [-c, /etc/nats/nats.conf]
+          ports:
+            - containerPort: 4222
+            - containerPort: 8222
+          volumeMounts:
+            - name: config
+              mountPath: /etc/nats
+            - name: data
+              mountPath: /data
+          resources:
+            requests:
+              memory: 128Mi
+              cpu: 100m
+            limits:
+              memory: 512Mi
+              cpu: 500m
+      volumes:
+        - name: config
+          configMap:
+            name: nats-config
+        - name: data
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nats
+  namespace: staging
+spec:
+  selector:
+    app: nats
+  ports:
+    - name: client
+      port: 4222
+      targetPort: 4222
+    - name: monitor
+      port: 8222
+      targetPort: 8222
+---
+# ─── MinIO ────────────────────────────────────────────────────────────────────
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: minio-pvc
+  namespace: staging
+spec:
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests:
+      storage: 20Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: minio
+  namespace: staging
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: minio
+  template:
+    metadata:
+      labels:
+        app: minio
+    spec:
+      containers:
+        - name: minio
+          image: minio/minio:latest
+          args: [server, /data, --console-address, ':9001']
+          ports:
+            - containerPort: 9000
+            - containerPort: 9001
+          env:
+            - name: MINIO_ROOT_USER
+              valueFrom:
+                secretKeyRef:
+                  name: pkt-staging-secrets
+                  key: MINIO_ROOT_USER
+            - name: MINIO_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: pkt-staging-secrets
+                  key: MINIO_ROOT_PASSWORD
+          volumeMounts:
+            - name: data
+              mountPath: /data
+          readinessProbe:
+            httpGet:
+              path: /minio/health/ready
+              port: 9000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          resources:
+            requests:
+              memory: 256Mi
+              cpu: 200m
+            limits:
+              memory: 1Gi
+              cpu: 500m
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: minio-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: minio
+  namespace: staging
+spec:
+  selector:
+    app: minio
+  ports:
+    - name: api
+      port: 9000
+      targetPort: 9000
+    - name: console
+      port: 9001
+      targetPort: 9001
+---
+# ─── Keycloak ─────────────────────────────────────────────────────────────────
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: keycloak
+  namespace: staging
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: keycloak
+  template:
+    metadata:
+      labels:
+        app: keycloak
+    spec:
+      containers:
+        - name: keycloak
+          image: quay.io/keycloak/keycloak:26.1
+          args: [start, --import-realm]
+          ports:
+            - containerPort: 8080
+          env:
+            - name: KC_DB
+              value: postgres
+            - name: KC_DB_URL
+              value: jdbc:postgresql://postgres:5432/keycloak_db
+            - name: KC_DB_USERNAME
+              value: keycloak
+            - name: KC_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: pkt-staging-secrets
+                  key: KEYCLOAK_DB_PASSWORD
+            - name: KEYCLOAK_ADMIN
+              value: admin
+            - name: KEYCLOAK_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: pkt-staging-secrets
+                  key: KEYCLOAK_ADMIN_PASSWORD
+            - name: KC_HOSTNAME
+              value: staging.pkt.kz
+            - name: KC_HTTP_ENABLED
+              value: 'true'
+            - name: KC_PROXY
+              value: edge
+          volumeMounts:
+            - name: realm-config
+              mountPath: /opt/keycloak/data/import
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: 8080
+            initialDelaySeconds: 60
+            periodSeconds: 15
+            failureThreshold: 10
+          resources:
+            requests:
+              memory: 512Mi
+              cpu: 500m
+            limits:
+              memory: 1.5Gi
+              cpu: 1000m
+      volumes:
+        - name: realm-config
+          configMap:
+            name: keycloak-realm-config
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: keycloak-realm-config
+  namespace: staging
+binaryData: {}
+# Realm JSON монтируется как файл — создаётся отдельно:
+# kubectl create configmap keycloak-realm-config -n staging \
+#   --from-file=realm-pkt.json=infra/keycloak/realm-pkt.json
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: keycloak
+  namespace: staging
+spec:
+  selector:
+    app: keycloak
+  ports:
+    - port: 8080
+      targetPort: 8080
+---
+# ─── Directus ─────────────────────────────────────────────────────────────────
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: directus
+  namespace: staging
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: directus
+  template:
+    metadata:
+      labels:
+        app: directus
+    spec:
+      containers:
+        - name: directus
+          image: directus/directus:11
+          ports:
+            - containerPort: 8055
+          env:
+            - name: SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: pkt-staging-secrets
+                  key: DIRECTUS_SECRET
+            - name: DB_CLIENT
+              value: pg
+            - name: DB_HOST
+              value: postgres
+            - name: DB_PORT
+              value: '5432'
+            - name: DB_DATABASE
+              value: directus_db
+            - name: DB_USER
+              value: directus
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: pkt-staging-secrets
+                  key: DIRECTUS_DB_PASSWORD
+            - name: ADMIN_EMAIL
+              value: admin@pkt.kz
+            - name: ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: pkt-staging-secrets
+                  key: DIRECTUS_ADMIN_PASSWORD
+            - name: PUBLIC_URL
+              value: https://staging.pkt.kz/cms
+            - name: CORS_ORIGIN
+              value: https://staging.pkt.kz
+          readinessProbe:
+            httpGet:
+              path: /server/health
+              port: 8055
+            initialDelaySeconds: 20
+            periodSeconds: 10
+          resources:
+            requests:
+              memory: 256Mi
+              cpu: 200m
+            limits:
+              memory: 1Gi
+              cpu: 500m
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: directus
+  namespace: staging
+spec:
+  selector:
+    app: directus
+  ports:
+    - port: 8055
+      targetPort: 8055
