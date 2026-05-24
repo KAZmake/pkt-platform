@@ -1,0 +1,183 @@
+name: Mobile Distribution
+
+on:
+  workflow_dispatch:
+    inputs:
+      profile:
+        description: 'EAS build profile'
+        required: true
+        default: 'staging'
+        type: choice
+        options: [staging, production]
+      platform:
+        description: 'Platform to build'
+        required: true
+        default: 'all'
+        type: choice
+        options: [all, ios, android]
+      submit:
+        description: 'Submit to TestFlight / Firebase after build?'
+        required: false
+        default: 'false'
+        type: choice
+        options: ['true', 'false']
+
+  push:
+    branches: [main]
+    paths:
+      - 'apps/mobile/**'
+      - '.github/workflows/mobile-dist.yml'
+
+env:
+  EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+
+jobs:
+  # ─── Type-check & lint ───────────────────────────────────────────────────────
+  validate:
+    name: Validate mobile app
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/mobile
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: latest
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+        working-directory: .
+
+      - name: Type-check
+        run: pnpm --filter mobile exec tsc --noEmit
+
+  # ─── EAS Build ──────────────────────────────────────────────────────────────
+  eas-build:
+    name: EAS Build (${{ github.event.inputs.platform || 'all' }}, ${{ github.event.inputs.profile || 'staging' }})
+    needs: [validate]
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/mobile
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: latest
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+        working-directory: .
+
+      - name: Setup EAS
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Build iOS
+        if: ${{ github.event.inputs.platform == 'ios' || github.event.inputs.platform == 'all' || github.event.inputs.platform == '' }}
+        run: |
+          eas build \
+            --platform ios \
+            --profile "${{ github.event.inputs.profile || 'staging' }}" \
+            --non-interactive \
+            --no-wait
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Build Android
+        if: ${{ github.event.inputs.platform == 'android' || github.event.inputs.platform == 'all' || github.event.inputs.platform == '' }}
+        run: |
+          eas build \
+            --platform android \
+            --profile "${{ github.event.inputs.profile || 'staging' }}" \
+            --non-interactive \
+            --no-wait
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+
+  # ─── Distribute (staging profile only) ──────────────────────────────────────
+  distribute:
+    name: Distribute builds
+    needs: [eas-build]
+    if: |
+      (github.event.inputs.submit == 'true') ||
+      (github.event_name == 'push' && github.ref == 'refs/heads/main')
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/mobile
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: latest
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+        working-directory: .
+
+      - name: Setup EAS
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Submit iOS → TestFlight
+        if: ${{ github.event.inputs.platform == 'ios' || github.event.inputs.platform == 'all' || github.event.inputs.platform == '' }}
+        run: |
+          eas submit \
+            --platform ios \
+            --profile "${{ github.event.inputs.profile || 'staging' }}" \
+            --latest \
+            --non-interactive
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          # App Store Connect credentials (set in GitHub Secrets):
+          # EXPO_APPLE_APP_SPECIFIC_PASSWORD — Apple app-specific password
+          EXPO_APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.EXPO_APPLE_APP_SPECIFIC_PASSWORD }}
+
+      - name: Submit Android → Firebase App Distribution
+        if: ${{ github.event.inputs.platform == 'android' || github.event.inputs.platform == 'all' || github.event.inputs.platform == '' }}
+        run: |
+          # Download the latest Android build artifact from EAS
+          ARTIFACT_URL=$(eas build:list \
+            --platform android \
+            --profile "${{ github.event.inputs.profile || 'staging' }}" \
+            --limit 1 \
+            --json \
+            --non-interactive \
+            | python3 -c "import json,sys; builds=json.load(sys.stdin); print(builds[0]['artifacts']['buildUrl'])" 2>/dev/null || echo "")
+
+          if [[ -z "$ARTIFACT_URL" ]]; then
+            echo "No build artifact found — skipping Firebase upload"
+            exit 0
+          fi
+
+          curl -fsSL "$ARTIFACT_URL" -o app.apk
+
+          # Upload to Firebase App Distribution
+          npx firebase-tools appdistribution:distribute app.apk \
+            --app "${{ secrets.FIREBASE_APP_ID_ANDROID }}" \
+            --groups "testers" \
+            --release-notes "Build from commit ${{ github.sha }}" \
+            --token "${{ secrets.FIREBASE_TOKEN }}"
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
