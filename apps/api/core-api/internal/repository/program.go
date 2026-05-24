@@ -65,6 +65,9 @@ type CreateProgramInput struct {
 }
 
 func (r *ProgramRepository) Create(ctx context.Context, inp CreateProgramInput) (*model.LoanProgram, error) {
+	if inp.ActivityTypes == nil {
+		inp.ActivityTypes = []string{}
+	}
 	row := r.db.QueryRow(ctx, `
 		INSERT INTO loan_programs
 		  (name, name_kz, name_en, rate, min_amount, max_amount,
