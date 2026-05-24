@@ -17,6 +17,11 @@
       "versionCode": 1,
       "adaptiveIcon": {
         "backgroundColor": "#1a5c36"
+      },
+      "config": {
+        "googleMaps": {
+          "apiKey": "REPLACE_WITH_GOOGLE_MAPS_API_KEY"
+        }
       }
     },
     "web": {
@@ -30,6 +35,12 @@
         "expo-notifications",
         {
           "color": "#1a5c36"
+        }
+      ],
+      [
+        "react-native-maps",
+        {
+          "googleMapsApiKey": "REPLACE_WITH_GOOGLE_MAPS_API_KEY"
         }
       ]
     ],

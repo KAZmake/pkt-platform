@@ -8,6 +8,8 @@ export default function MoreLayout() {
       <Stack.Screen name="contacts" />
       <Stack.Screen name="faq" />
       <Stack.Screen name="news" />
+      <Stack.Screen name="calculator" />
+      <Stack.Screen name="apply" />
     </Stack>
   );
 }

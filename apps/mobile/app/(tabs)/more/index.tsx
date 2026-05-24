@@ -40,14 +40,16 @@ const MENU_SECTIONS: { title: string; items: MenuItem[] }[] = [
       {
         icon: 'calculator-outline',
         label: 'Калькулятор займа',
-        route: '/(tabs)/programs',
+        sub: 'Рассчитать платёж',
+        route: '/(tabs)/more/calculator',
         color: '#c8921a',
       },
       { icon: 'map-outline', label: 'Карта хозяйств', route: '/(tabs)/map' },
       {
         icon: 'document-text-outline',
         label: 'Подать заявку',
-        route: '/(tabs)/programs',
+        sub: 'Форма заявки онлайн',
+        route: '/(tabs)/more/apply',
         color: '#1a5c36',
       },
     ],
